@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ServiceResource;
 use App\Models\Service;
 use App\Models\ServiceCategory;
+use App\Services\AuditLogger;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ServiceController extends Controller
@@ -25,7 +27,13 @@ class ServiceController extends Controller
     public function store(Request $request): JsonResponse
     {
         $this->authorize('create', Service::class);
-        $service = Service::query()->create($this->validated($request));
+        $service = DB::transaction(function () use ($request) {
+            $data = $this->validated($request);
+            $service = Service::query()->create($data);
+            app(AuditLogger::class)->write($request->user(), 'service.saved', $service, null, $this->serviceAudit($data));
+
+            return $service;
+        });
 
         return (new ServiceResource($service->load('category')))->response()->setStatusCode(201);
     }
@@ -40,7 +48,12 @@ class ServiceController extends Controller
     public function update(Request $request, Service $service): ServiceResource
     {
         $this->authorize('update', $service);
-        $service->update($this->validated($request));
+        DB::transaction(function () use ($request, $service): void {
+            $before = $this->serviceAudit($service->only(['name', 'duration_minutes', 'price_amount', 'is_active']));
+            $data = $this->validated($request);
+            $service->update($data);
+            app(AuditLogger::class)->write($request->user(), 'service.saved', $service, $before, $this->serviceAudit($data));
+        });
 
         return new ServiceResource($service->load('category'));
     }
@@ -79,5 +92,14 @@ class ServiceController extends Controller
         }
 
         return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function serviceAudit(array $data): array
+    {
+        return array_intersect_key($data, array_flip(['name', 'duration_minutes', 'price_amount', 'is_active']));
     }
 }

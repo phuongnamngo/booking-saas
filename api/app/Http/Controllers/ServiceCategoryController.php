@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ServiceCategoryResource;
 use App\Models\ServiceCategory;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class ServiceCategoryController extends Controller
 {
@@ -24,7 +26,12 @@ class ServiceCategoryController extends Controller
             'name' => ['required', 'string', 'max:255'],
         ]);
 
-        $category = ServiceCategory::query()->create($data);
+        $category = DB::transaction(function () use ($request, $data) {
+            $category = ServiceCategory::query()->create($data);
+            app(AuditLogger::class)->write($request->user(), 'service_category.saved', $category, null, $data);
+
+            return $category;
+        });
 
         return (new ServiceCategoryResource($category))->response()->setStatusCode(201);
     }
@@ -42,7 +49,11 @@ class ServiceCategoryController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
-        $serviceCategory->update($data);
+        DB::transaction(function () use ($request, $serviceCategory, $data): void {
+            $before = $serviceCategory->only(['name']);
+            $serviceCategory->update($data);
+            app(AuditLogger::class)->write($request->user(), 'service_category.saved', $serviceCategory, $before, $data);
+        });
 
         return new ServiceCategoryResource($serviceCategory);
     }

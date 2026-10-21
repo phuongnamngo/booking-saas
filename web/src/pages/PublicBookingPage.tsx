@@ -38,6 +38,7 @@ export function PublicBookingPage() {
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [bookingId, setBookingId] = useState<string | null>(null)
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -156,6 +157,23 @@ export function PublicBookingPage() {
     }
   }
 
+  async function pay() {
+    if (bookingId === null) {
+      return
+    }
+    setPending(true)
+    setError(null)
+    try {
+      await ensureCsrfCookie()
+      const response = await api.post(`/api/v1/public/${slug}/appointments/${bookingId}/checkout`)
+      setCheckoutUrl((response.data as { url: string }).url)
+    } catch (caught) {
+      setError(readApiError(caught))
+    } finally {
+      setPending(false)
+    }
+  }
+
   const branch = branches.find((item) => item.id === branchId)
   const chosenServices = services.filter((item) => serviceIds.includes(item.id))
   const chosenStaff = staff.find((item) => item.id === staffId)
@@ -172,6 +190,10 @@ export function PublicBookingPage() {
           <p>
             Giờ đã chọn <time dateTime={startsAt}>{formatWhen(startsAt)}</time>
           </p>
+          <button type="button" disabled={pending} onClick={() => void pay()}>
+            Thanh toán
+          </button>
+          {checkoutUrl ? <a href={checkoutUrl}>Thanh toán</a> : null}
         </section>
       ) : (
         <>

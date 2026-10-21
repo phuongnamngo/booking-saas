@@ -27,7 +27,7 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-    command: php artisan queue:work --tries=3 --timeout=90   # đổi thành "php artisan horizon" sau khi cài Horizon
+    command: php artisan horizon
     volumes:
       - ./api:/var/www/html
     depends_on:

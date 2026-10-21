@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['branch_id', 'staff_id', 'customer_id', 'created_by', 'starts_at', 'ends_at', 'status'])]
+#[Fillable(['branch_id', 'staff_id', 'customer_id', 'created_by', 'starts_at', 'ends_at', 'status', 'reminder_24h_sent_at', 'reminder_2h_sent_at'])]
 class Appointment extends Model
 {
     use BelongsToTenant, HasPublicId;
@@ -35,11 +35,18 @@ class Appointment extends Model
         return $this->hasMany(AppointmentService::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     protected function casts(): array
     {
         return [
             'starts_at' => UtcDateTime::class,
             'ends_at' => UtcDateTime::class,
+            'reminder_24h_sent_at' => 'datetime',
+            'reminder_2h_sent_at' => 'datetime',
         ];
     }
 }

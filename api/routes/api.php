@@ -6,12 +6,19 @@ use App\Http\Controllers\Auth\SessionController;
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\BranchScheduleController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Public\CatalogController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ServiceCategoryController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StaffScheduleController;
+use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\WaitlistController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -25,8 +32,10 @@ Route::prefix('v1')->group(function () {
         'time' => now()->toIso8601String(),
     ]));
 
+    Route::post('/stripe/webhook', [StripeWebhookController::class, 'store']);
+
     Route::post('/auth/register', [RegisterController::class, 'store']);
-    Route::post('/auth/login', [SessionController::class, 'store']);
+    Route::post('/auth/login', [SessionController::class, 'store'])->middleware('throttle:login');
     Route::post('/auth/logout', [SessionController::class, 'destroy']);
     Route::post('/invitations/accept', [InvitationController::class, 'accept']);
 
@@ -39,7 +48,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/services', [CatalogController::class, 'services']);
         Route::get('/staff', [CatalogController::class, 'staff']);
         Route::get('/availability', AvailabilityController::class);
-        Route::post('/appointments', [AppointmentController::class, 'store']);
+        Route::post('/appointments', [AppointmentController::class, 'store'])->middleware('throttle:booking');
+        Route::post('/appointments/{appointment}/checkout', [CheckoutController::class, 'store']);
+        Route::post('/reviews', [ReviewController::class, 'store']);
+        Route::post('/waitlist', [WaitlistController::class, 'store']);
     });
 
     Route::middleware(['auth:sanctum', 'tenant.auth'])->group(function () {
@@ -55,9 +67,16 @@ Route::prefix('v1')->group(function () {
         Route::post('invitations', [InvitationController::class, 'store']);
         Route::get('availability', AvailabilityController::class);
         Route::get('appointments', [AppointmentController::class, 'index']);
-        Route::post('appointments', [AppointmentController::class, 'store']);
+        Route::post('appointments', [AppointmentController::class, 'store'])->middleware('throttle:booking');
+        Route::post('appointments/{appointment}/checkout', [CheckoutController::class, 'store']);
         Route::patch('appointments/{appointment}', [AppointmentController::class, 'update']);
         Route::post('appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
+        Route::get('appointments/{appointment}/payments', [AppointmentController::class, 'payments']);
         Route::post('appointments/{appointment}/status', [AppointmentController::class, 'status']);
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::post('notifications/{id}/read', [NotificationController::class, 'read']);
+        Route::get('reports', [ReportController::class, 'index']);
+        Route::post('reports/exports', [ReportExportController::class, 'store']);
+        Route::get('reports/exports/{export}', [ReportExportController::class, 'show']);
     });
 });

@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Service;
 use App\Models\StaffProfile;
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -78,7 +79,7 @@ class StaffController extends Controller
             ],
         ]);
 
-        return DB::transaction(function () use ($data, $profile, $tenantId): StaffProfile {
+        return DB::transaction(function () use ($request, $data, $profile, $tenantId): StaffProfile {
             $user = User::query()->where('public_id', $data['user_id'])->firstOrFail();
 
             $duplicate = StaffProfile::query()
@@ -92,6 +93,7 @@ class StaffController extends Controller
                 ]);
             }
 
+            $before = $profile->exists ? ['user_id' => $profile->user?->public_id] : null;
             $profile->user_id = $user->id;
             $profile->save();
 
@@ -104,6 +106,12 @@ class StaffController extends Controller
             $profile->services()->sync(
                 $serviceIds->mapWithKeys(fn ($id) => [$id => ['tenant_id' => $tenantId]])->all(),
             );
+
+            app(AuditLogger::class)->write($request->user(), 'staff.saved', $profile, $before, [
+                'user_id' => $user->public_id,
+                'branch_ids' => $data['branch_ids'],
+                'service_ids' => $data['service_ids'],
+            ]);
 
             return $profile->load(['user.branches', 'services']);
         });

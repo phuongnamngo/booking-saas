@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { api } from '../src/api/client'
@@ -42,3 +42,48 @@ it('shows a pending appointment', async () => {
 
   expect(await screen.findByText('pending')).toBeInTheDocument()
 })
+
+it('requests a week range when Tuần is clicked', async () => {
+  setSession({ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', name: 'An', email: 'a@example.com' })
+  vi.mocked(api.get).mockResolvedValue({
+    data: [
+      {
+        id: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+        name: 'Chi nhánh 1',
+        status: 'pending',
+        starts_at: '2026-10-26T02:00:00+00:00',
+        ends_at: '2026-10-26T02:30:00+00:00',
+      },
+    ],
+  })
+
+  render(
+    <MemoryRouter initialEntries={['/app/appointments']}>
+      <AppRouter />
+    </MemoryRouter>,
+  )
+
+  expect(await screen.findByText('pending')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Tuần' }))
+
+  await waitFor(() => {
+    const weekCall = vi.mocked(api.get).mock.calls.find((call) => {
+      const params = call[1] as { params?: { from?: string } } | undefined
+      return params?.params?.from !== undefined
+    })
+    const params = (weekCall?.[1] as { params: { from: string; to: string; branch_id: string } }).params
+    expect(weekCall?.[0]).toBe('/api/v1/appointments')
+    expect(params.branch_id).toBe('01ARZ3NDEKTSV4RRFFQ69G5FAV')
+    expect(params.to).toBe(addDays(params.from, 6))
+    expect(params).not.toHaveProperty('date')
+  })
+})
+
+function addDays(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  date.setDate(date.getDate() + days)
+  const nextMonth = String(date.getMonth() + 1).padStart(2, '0')
+  const nextDay = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${nextMonth}-${nextDay}`
+}

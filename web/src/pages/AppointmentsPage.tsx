@@ -26,6 +26,15 @@ function today(): string {
   return `${now.getFullYear()}-${month}-${day}`
 }
 
+function addDays(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  date.setDate(date.getDate() + days)
+  const nextMonth = String(date.getMonth() + 1).padStart(2, '0')
+  const nextDay = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${nextMonth}-${nextDay}`
+}
+
 export function AppointmentsPage() {
   const [branches, setBranches] = useState<Option[]>([])
   const [staff, setStaff] = useState<Option[]>([])
@@ -33,18 +42,22 @@ export function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [branchId, setBranchId] = useState('')
   const [date, setDate] = useState(today)
+  const [view, setView] = useState<'day' | 'week'>('day')
+  const [checkoutUrls, setCheckoutUrls] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
-  async function loadAppointments(nextBranchId: string, nextDate: string) {
+  async function loadAppointments(nextBranchId: string, nextDate: string, nextView: 'day' | 'week') {
     if (nextBranchId === '') {
       setAppointments([])
       return
     }
-    const response = await api.get('/api/v1/appointments', {
-      params: { date: nextDate, branch_id: nextBranchId },
-    })
+    const params =
+      nextView === 'week'
+        ? { from: nextDate, to: addDays(nextDate, 6), branch_id: nextBranchId }
+        : { date: nextDate, branch_id: nextBranchId }
+    const response = await api.get('/api/v1/appointments', { params })
     setAppointments(listFrom<Appointment>(response.data))
   }
 
@@ -69,7 +82,7 @@ export function AppointmentsPage() {
         setServices(listFrom<Option>(serviceResponse.data))
         const nextBranchId = nextBranches[0]?.id ?? ''
         setBranchId(nextBranchId)
-        await loadAppointments(nextBranchId, date)
+        await loadAppointments(nextBranchId, date, view)
       } catch (caught) {
         if (!cancelled) {
           setError(readApiError(caught))
@@ -86,12 +99,12 @@ export function AppointmentsPage() {
     return () => {
       cancelled = true
     }
-  }, [date])
+  }, [date, view])
 
   async function reload() {
     setError(null)
     try {
-      await loadAppointments(branchId, date)
+      await loadAppointments(branchId, date, view)
     } catch (caught) {
       setError(readApiError(caught))
     }
@@ -158,6 +171,23 @@ export function AppointmentsPage() {
     }
   }
 
+  async function pay(appointment: Appointment) {
+    setPending(true)
+    setError(null)
+    try {
+      await ensureCsrfCookie()
+      const response = await api.post(`/api/v1/appointments/${appointment.id}/checkout`)
+      const url = (response.data as { url?: string }).url
+      if (url) {
+        setCheckoutUrls((current) => ({ ...current, [appointment.id]: url }))
+      }
+    } catch (caught) {
+      setError(readApiError(caught))
+    } finally {
+      setPending(false)
+    }
+  }
+
   async function changeStatus(appointment: Appointment, status: string) {
     setPending(true)
     setError(null)
@@ -185,6 +215,12 @@ export function AppointmentsPage() {
           onChange={(event) => setDate(event.target.value)}
         />
       </label>
+      <button type="button" onClick={() => setView('day')}>
+        Ngày
+      </button>
+      <button type="button" onClick={() => setView('week')}>
+        Tuần
+      </button>
       <label>
         Chi nhánh
         <select
@@ -192,7 +228,7 @@ export function AppointmentsPage() {
           onChange={(event) => {
             const next = event.target.value
             setBranchId(next)
-            void loadAppointments(next, date).catch((caught) => setError(readApiError(caught)))
+            void loadAppointments(next, date, view).catch((caught) => setError(readApiError(caught)))
           }}
         >
           {branches.map((branch) => (
@@ -210,6 +246,12 @@ export function AppointmentsPage() {
             <button type="button" disabled={pending} onClick={() => void cancel(appointment)}>
               Hủy
             </button>
+            <button type="button" disabled={pending} onClick={() => void pay(appointment)}>
+              Thanh toán
+            </button>
+            {checkoutUrls[appointment.id] ? (
+              <a href={checkoutUrls[appointment.id]}>Thanh toán</a>
+            ) : null}
             {(nextStatus[appointment.status] ?? []).map((status) => (
               <button
                 key={status}

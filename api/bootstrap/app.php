@@ -7,6 +7,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,6 +22,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.public' => ResolvePublicTenant::class,
             'tenant.auth' => ResolveAuthenticatedTenant::class,
         ]);
+        $middleware->prependToPriorityList(
+            ThrottleRequests::class,
+            ResolvePublicTenant::class,
+        );
+        $middleware->prependToPriorityList(
+            ThrottleRequests::class,
+            ResolveAuthenticatedTenant::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

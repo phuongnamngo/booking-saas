@@ -2,14 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\IdempotencyReplay;
 use App\Models\Appointment;
 use App\Models\Branch;
+use App\Models\Payment;
+use App\Models\Refund;
 use App\Models\Service;
 use App\Models\StaffProfile;
 use App\Services\AppointmentBooker;
+use App\Services\AppointmentSideEffects;
+use App\Services\AuditLogger;
+use App\Services\AvailabilityCache;
+use App\Services\IdempotencyStore;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
@@ -22,7 +30,9 @@ class AppointmentController extends Controller
         }
 
         $data = $request->validate([
-            'date' => ['required', 'date_format:Y-m-d'],
+            'date' => ['required_without:from', 'date_format:Y-m-d'],
+            'from' => ['required_without:date', 'date_format:Y-m-d'],
+            'to' => ['required_with:from', 'date_format:Y-m-d'],
             'branch_id' => ['required', 'string'],
         ]);
 
@@ -36,8 +46,21 @@ class AppointmentController extends Controller
             abort(403);
         }
 
-        $start = CarbonImmutable::parse($data['date'], $branch->timezone)->startOfDay();
-        $end = $start->endOfDay();
+        if (isset($data['date'])) {
+            $start = CarbonImmutable::parse($data['date'], $branch->timezone)->startOfDay();
+            $end = $start->endOfDay();
+        } else {
+            $start = CarbonImmutable::parse($data['from'], $branch->timezone)->startOfDay();
+            $to = CarbonImmutable::parse($data['to'], $branch->timezone)->startOfDay();
+
+            if ($to->greaterThan($start->addDays(6))) {
+                throw ValidationException::withMessages([
+                    'to' => 'Khoảng xem tối đa 7 ngày.',
+                ]);
+            }
+
+            $end = CarbonImmutable::parse($data['to'], $branch->timezone)->endOfDay();
+        }
 
         $appointments = Appointment::query()
             ->where('branch_id', $branch->id)
@@ -57,7 +80,7 @@ class AppointmentController extends Controller
         ])->values());
     }
 
-    public function store(Request $request, AppointmentBooker $booker): JsonResponse
+    public function store(Request $request, AppointmentBooker $booker, IdempotencyStore $idempotency): JsonResponse
     {
         $data = $request->validate([
             'branch_id' => ['required', 'string'],
@@ -85,14 +108,32 @@ class AppointmentController extends Controller
             ], 422);
         }
 
-        $appointment = $booker->create(
-            $branch,
-            $staff,
-            $ordered,
-            CarbonImmutable::parse($data['starts_at']),
-            $data['customer'],
-            $request->user(),
-        );
+        $idempotencyKey = $request->header('Idempotency-Key');
+        $idempotencyHash = null;
+
+        if (is_string($idempotencyKey) && $idempotencyKey !== '') {
+            $idempotencyHash = $idempotency->hash($data);
+            $replay = $idempotency->replay((int) $branch->tenant_id, $idempotencyKey, $idempotencyHash);
+
+            if ($replay !== null) {
+                return $replay;
+            }
+        }
+
+        try {
+            $appointment = $booker->create(
+                $branch,
+                $staff,
+                $ordered,
+                CarbonImmutable::parse($data['starts_at']),
+                $data['customer'],
+                $request->user(),
+                is_string($idempotencyKey) && $idempotencyKey !== '' ? $idempotencyKey : null,
+                $idempotencyHash,
+            );
+        } catch (IdempotencyReplay $replay) {
+            return response()->json($replay->body, $replay->status);
+        }
 
         return response()->json($this->appointmentPayload($appointment), 201);
     }
@@ -126,6 +167,7 @@ class AppointmentController extends Controller
             CarbonImmutable::parse($data['starts_at']),
             $staff,
             $services,
+            $request->user(),
         );
 
         return response()->json($this->appointmentPayload($updated->load('staff')));
@@ -134,9 +176,32 @@ class AppointmentController extends Controller
     public function cancel(Request $request, Appointment $appointment): JsonResponse
     {
         $this->authorize('update', $appointment);
-        $this->transition($appointment, 'cancelled');
+        DB::transaction(function () use ($request, $appointment): void {
+            $logger = app(AuditLogger::class);
+            $before = $logger->appointmentState($appointment);
+            $this->transition($appointment, 'cancelled');
+            $logger->write($request->user(), 'appointment.cancelled', $appointment, $before, $logger->appointmentState($appointment));
+            DB::afterCommit(fn () => app(AppointmentSideEffects::class)->cancelled($appointment));
+        });
 
         return response()->json($this->appointmentPayload($appointment));
+    }
+
+    public function payments(Appointment $appointment): JsonResponse
+    {
+        $this->authorize('view', $appointment);
+
+        $rows = $appointment->payments()->with('refunds')->orderBy('id')->get()->map(fn (Payment $payment): array => [
+            'id' => $payment->public_id,
+            'amount' => $payment->amount,
+            'status' => $payment->status,
+            'refunds' => $payment->refunds->map(fn (Refund $refund): array => [
+                'amount' => $refund->amount,
+                'status' => $refund->status,
+            ])->values(),
+        ])->values();
+
+        return response()->json($rows);
     }
 
     public function status(Request $request, Appointment $appointment): JsonResponse
@@ -145,7 +210,15 @@ class AppointmentController extends Controller
         $data = $request->validate([
             'status' => ['required', 'string'],
         ]);
-        $this->transition($appointment, $data['status']);
+        DB::transaction(function () use ($request, $appointment, $data): void {
+            $logger = app(AuditLogger::class);
+            $before = $logger->appointmentState($appointment);
+            $this->transition($appointment, $data['status']);
+            $logger->write($request->user(), 'appointment.status', $appointment, $before, $logger->appointmentState($appointment));
+            if ($data['status'] === 'completed') {
+                DB::afterCommit(fn () => app(AppointmentSideEffects::class)->completed($appointment));
+            }
+        });
 
         return response()->json($this->appointmentPayload($appointment));
     }
@@ -165,6 +238,7 @@ class AppointmentController extends Controller
         }
 
         $appointment->update(['status' => $status]);
+        app(AvailabilityCache::class)->forgetAppointment($appointment->refresh());
     }
 
     /**

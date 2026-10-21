@@ -11,6 +11,7 @@ use App\Models\StaffProfile;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -29,6 +30,8 @@ class AppointmentBooker
         CarbonImmutable $startsAt,
         array $customer,
         ?User $actor,
+        ?string $idempotencyKey = null,
+        ?string $idempotencyHash = null,
     ): Appointment {
         if ($startsAt->timezone($branch->timezone)->lessThan(CarbonImmutable::now($branch->timezone))) {
             throw ValidationException::withMessages([
@@ -42,7 +45,7 @@ class AppointmentBooker
             ]);
         }
 
-        return DB::transaction(function () use ($branch, $staff, $services, $startsAt, $customer, $actor): Appointment {
+        return DB::transaction(function () use ($branch, $staff, $services, $startsAt, $customer, $actor, $idempotencyKey, $idempotencyHash): Appointment {
             $locked = StaffProfile::query()->whereKey($staff->id)->lockForUpdate()->first();
 
             if ($locked === null || ! $this->slotIsOpen($branch, $locked, $services, $startsAt, null)) {
@@ -84,6 +87,30 @@ class AppointmentBooker
                 ]);
             }
 
+            if (is_string($idempotencyKey) && $idempotencyKey !== '' && is_string($idempotencyHash)) {
+                $appointment->loadMissing('staff');
+                app(IdempotencyStore::class)->store(
+                    (int) $appointment->tenant_id,
+                    $idempotencyKey,
+                    $idempotencyHash,
+                    [
+                        'id' => $appointment->public_id,
+                        'staff_id' => $appointment->staff?->public_id,
+                        'status' => $appointment->status,
+                        'starts_at' => $appointment->starts_at->toIso8601String(),
+                        'ends_at' => $appointment->ends_at->toIso8601String(),
+                    ],
+                );
+            }
+
+            $logger = app(AuditLogger::class);
+            $logger->write($actor, 'appointment.created', $appointment, null, $logger->appointmentState($appointment));
+
+            DB::afterCommit(function () use ($appointment): void {
+                app(AvailabilityCache::class)->forgetAppointment($appointment);
+                app(AppointmentSideEffects::class)->created($appointment);
+            });
+
             return $appointment;
         });
     }
@@ -104,6 +131,7 @@ class AppointmentBooker
         CarbonImmutable $startsAt,
         ?StaffProfile $staff = null,
         ?Collection $services = null,
+        ?User $actor = null,
     ): Appointment {
         if (! in_array($appointment->status, ['pending', 'confirmed'], true)) {
             throw ValidationException::withMessages([
@@ -122,7 +150,7 @@ class AppointmentBooker
             ]);
         }
 
-        return DB::transaction(function () use ($appointment, $startsAt, $staff, $services): Appointment {
+        return DB::transaction(function () use ($appointment, $startsAt, $staff, $services, $actor): Appointment {
             foreach ($this->staffIdsForUpdate($appointment->staff_id, $staff->id) as $staffId) {
                 StaffProfile::query()->whereKey($staffId)->lockForUpdate()->first();
             }
@@ -130,6 +158,17 @@ class AppointmentBooker
             if (! $this->slotIsOpen($appointment->branch, $staff, $services, $startsAt, $appointment->id)) {
                 throw new SlotUnavailableException;
             }
+
+            $appointment->loadMissing(['branch', 'staff', 'services.service']);
+            $logger = app(AuditLogger::class);
+            $before = $logger->appointmentState($appointment);
+            $previousKey = AvailabilityCache::key(
+                (int) $appointment->tenant_id,
+                $appointment->branch->public_id,
+                $appointment->staff->public_id,
+                $appointment->services->map(fn ($row): ?string => $row->service?->public_id)->filter()->values()->all(),
+                $appointment->starts_at->timezone($appointment->branch->timezone)->toDateString(),
+            );
 
             $appointment->update([
                 'staff_id' => $staff->id,
@@ -147,7 +186,15 @@ class AppointmentBooker
                 ]);
             }
 
-            return $appointment->refresh();
+            $updated = $appointment->refresh();
+            $logger->write($actor, 'appointment.rescheduled', $updated, $before, $logger->appointmentState($updated));
+            DB::afterCommit(function () use ($previousKey, $updated, $before): void {
+                Cache::forget($previousKey);
+                app(AvailabilityCache::class)->forgetAppointment($updated);
+                app(AppointmentSideEffects::class)->rescheduled($updated, $before['starts_at']);
+            });
+
+            return $updated;
         });
     }
 

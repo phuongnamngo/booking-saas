@@ -143,16 +143,16 @@ Hệ thống đặt lịch hẹn multi-tenant cho spa, salon, phòng khám.
 - [x] React: trang quản trị, trang đặt lịch công khai
 
 ### Tuần 3: Queue, cache, thông báo
-- [ ] Email, nhắc lịch, notification in-app, Horizon
-- [ ] Cache Redis, tối ưu query, rate limiting, idempotency
-- [ ] React: lịch tuần/ngày, notification bell
+- [x] Email, nhắc lịch, notification in-app, Horizon
+- [x] Cache Redis, tối ưu query, rate limiting, idempotency
+- [x] React: lịch tuần/ngày, notification bell
 - [ ] **Mốc:** bản chạy được A đến E, đưa vào CV ngay
 
 ### Tuần 4: Thanh toán, báo cáo, chất lượng
-- [ ] Stripe test + webhook, hoàn tiền
-- [ ] Báo cáo, xuất CSV
-- [ ] Đánh giá, audit log, waitlist
-- [ ] Bổ sung test, coverage phần lõi
+- [x] Stripe test + webhook, hoàn tiền
+- [x] Báo cáo, xuất CSV
+- [x] Đánh giá, audit log, waitlist
+- [x] Bổ sung test, coverage phần lõi
 
 ### Tuần 5: Deploy và hoàn thiện
 - [ ] Deploy thật (VPS/AWS), domain, HTTPS
