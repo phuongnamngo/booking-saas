@@ -161,6 +161,64 @@
   }
 }
 
+.screen {
+  text-align: left;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.screen nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.screen form,
+.screen section {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.screen label {
+  display: grid;
+  gap: 4px;
+}
+
+.screen [role='alert'] {
+  color: #9f1239;
+}
+
+.wizard {
+  text-align: left;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.wizard ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.wizard li[aria-current='step'] {
+  font-weight: 700;
+}
+
+.wizard section,
+.wizard label {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
 .ticks {
   position: relative;
   width: 100%;

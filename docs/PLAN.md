@@ -1,7 +1,7 @@
 # Booking SaaS: Kế hoạch dự án
 
 Hệ thống đặt lịch hẹn multi-tenant cho spa, salon, phòng khám.
-**Stack:** Laravel 12 (REST API) · React + Vite + TypeScript · MySQL 8 · Redis · Docker · GitHub Actions
+**Stack:** Laravel 13 (REST API) · React + Vite + TypeScript · MySQL 8 · Redis · Docker · GitHub Actions
 **Cấu trúc:** monorepo (`api/` + `web/`)
 
 > Cách dùng: đánh dấu `[x]` khi xong một mục. Mỗi mục nên là 1 PR/commit nhỏ.
@@ -122,25 +122,25 @@ Hệ thống đặt lịch hẹn multi-tenant cho spa, salon, phòng khám.
 ## 5. Lộ trình
 
 ### Giai đoạn 0: Khởi tạo (1 đến 2 ngày)
-- [ ] Tạo monorepo, Docker Compose chạy được (xem `SETUP.md`)
-- [ ] Laravel + React chạy, gọi được `/api/health` từ React
-- [ ] Lint: Pint, ESLint, Prettier; pre-commit hook
-- [ ] GitHub Actions bản đầu (lint + test)
-- [ ] Vẽ ERD (dbdiagram.io) và sơ đồ kiến trúc
-- [ ] README khung
+- [x] Tạo monorepo, Docker Compose chạy được (xem `SETUP.md`)
+- [x] Laravel + React chạy, gọi được `/api/v1/health` từ React
+- [ ] Lint: Pint và ESLint đã có trong CI; còn thiếu Prettier config và pre-commit hook
+- [x] GitHub Actions bản đầu (lint + test)
+- [x] Vẽ ERD (dbdiagram.io) và sơ đồ kiến trúc
+- [x] README khung ở root repo
 
 ### Tuần 1: Nền tảng
-- [ ] Migration, model, factory, seeder cho tenants/users/roles
-- [ ] Multi-tenancy (middleware + global scope + trait `BelongsToTenant`)
-- [ ] Auth Sanctum, RBAC, invitation
-- [ ] React: layout, login/register, protected routes, API client, TanStack Query
-- [ ] Test tenant isolation
+- [x] Migration, model, factory, seeder cho tenants/users/roles
+- [x] Multi-tenancy (middleware + global scope + trait `BelongsToTenant`)
+- [x] Auth Sanctum, RBAC, invitation
+- [x] React: layout, login/register, protected routes, API client, TanStack Query
+- [x] Test tenant isolation
 
 ### Tuần 2: Danh mục và đặt lịch lõi
-- [ ] CRUD chi nhánh, dịch vụ, nhân viên, ca làm, ngày nghỉ
-- [ ] API khung giờ trống
-- [ ] Đặt lịch chống trùng, đổi/hủy lịch
-- [ ] React: trang quản trị, trang đặt lịch công khai
+- [x] CRUD chi nhánh, dịch vụ, nhân viên, ca làm, ngày nghỉ
+- [x] API khung giờ trống
+- [x] Đặt lịch chống trùng, đổi/hủy lịch
+- [x] React: trang quản trị, trang đặt lịch công khai
 
 ### Tuần 3: Queue, cache, thông báo
 - [ ] Email, nhắc lịch, notification in-app, Horizon

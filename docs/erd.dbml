@@ -1,0 +1,278 @@
+Table tenants {
+  id bigint [pk, increment]
+  public_id char(26) [unique, not null]
+  name varchar(255) [not null]
+  slug varchar(255) [unique, not null]
+  timezone varchar(64) [not null, default: 'Asia/Ho_Chi_Minh']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table users {
+  id bigint [pk, increment]
+  public_id char(26) [unique, not null]
+  tenant_id bigint [ref: > tenants.id]
+  name varchar(255) [not null]
+  email varchar(255) [unique, not null]
+  email_verified_at timestamp
+  password varchar(255) [not null]
+  remember_token varchar(100)
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    tenant_id [name: 'users_tenant_id_index']
+  }
+}
+
+Table roles {
+  id bigint [pk, increment]
+  tenant_id bigint [ref: > tenants.id]
+  name varchar(255) [not null]
+  guard_name varchar(255) [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (tenant_id, name, guard_name) [unique]
+  }
+}
+
+Table permissions {
+  id bigint [pk, increment]
+  name varchar(255) [not null]
+  guard_name varchar(255) [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (name, guard_name) [unique]
+  }
+}
+
+Table model_has_roles {
+  tenant_id bigint [not null, ref: > tenants.id]
+  role_id bigint [not null, ref: > roles.id]
+  model_type varchar(255) [not null]
+  model_id bigint [not null]
+
+  indexes {
+    (tenant_id, role_id, model_id, model_type) [pk]
+  }
+}
+
+Table model_has_permissions {
+  tenant_id bigint [not null, ref: > tenants.id]
+  permission_id bigint [not null, ref: > permissions.id]
+  model_type varchar(255) [not null]
+  model_id bigint [not null]
+
+  indexes {
+    (tenant_id, permission_id, model_id, model_type) [pk]
+  }
+}
+
+Table role_has_permissions {
+  permission_id bigint [not null, ref: > permissions.id]
+  role_id bigint [not null, ref: > roles.id]
+
+  indexes {
+    (permission_id, role_id) [pk]
+  }
+}
+
+Table branches {
+  id bigint [pk, increment]
+  public_id char(26) [unique, not null]
+  tenant_id bigint [not null, ref: > tenants.id]
+  name varchar(255) [not null]
+  address varchar(255)
+  phone varchar(32)
+  timezone varchar(64) [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (tenant_id, name) [name: 'branches_tenant_id_name_index']
+  }
+}
+
+Table branch_opening_hours {
+  id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.id]
+  branch_id bigint [not null, ref: > branches.id]
+  weekday tinyint [not null, note: '0 Sunday through 6 Saturday']
+  opens_at time [not null]
+  closes_at time [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (tenant_id, branch_id, weekday) [name: 'branch_opening_hours_tenant_branch_weekday_index']
+  }
+}
+
+Table branch_holidays {
+  id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.id]
+  branch_id bigint [not null, ref: > branches.id]
+  date date [not null]
+  name varchar(255) [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (tenant_id, branch_id, date) [name: 'branch_holidays_tenant_branch_date_index']
+  }
+}
+
+Table service_categories {
+  id bigint [pk, increment]
+  public_id char(26) [unique, not null]
+  tenant_id bigint [not null, ref: > tenants.id]
+  name varchar(255) [not null]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table services {
+  id bigint [pk, increment]
+  public_id char(26) [unique, not null]
+  tenant_id bigint [not null, ref: > tenants.id]
+  category_id bigint [ref: > service_categories.id]
+  name varchar(255) [not null]
+  duration_minutes int [not null]
+  price_amount int [not null, note: 'VND integer']
+  is_active boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (tenant_id, is_active) [name: 'services_tenant_id_is_active_index']
+  }
+}
+
+Table staff_profiles {
+  id bigint [pk, increment]
+  public_id char(26) [unique, not null]
+  tenant_id bigint [not null, ref: > tenants.id]
+  user_id bigint [unique, not null, ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table branch_user {
+  id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.id]
+  branch_id bigint [not null, ref: > branches.id]
+  user_id bigint [not null, ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (branch_id, user_id) [unique]
+  }
+}
+
+Table staff_services {
+  id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.id]
+  staff_profile_id bigint [not null, ref: > staff_profiles.id]
+  service_id bigint [not null, ref: > services.id]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (staff_profile_id, service_id) [unique]
+  }
+}
+
+Table staff_working_hours {
+  id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.id]
+  staff_profile_id bigint [not null, ref: > staff_profiles.id]
+  weekday tinyint [not null]
+  starts_at time [not null]
+  ends_at time [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (tenant_id, staff_profile_id, weekday) [name: 'staff_working_hours_tenant_staff_weekday_index']
+  }
+}
+
+Table staff_schedule_exceptions {
+  id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.id]
+  staff_profile_id bigint [not null, ref: > staff_profiles.id]
+  type varchar(16) [not null, note: 'off or extra']
+  starts_at datetime [not null]
+  ends_at datetime [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (tenant_id, staff_profile_id, starts_at) [name: 'staff_schedule_exceptions_lookup_index']
+  }
+}
+
+Table customers {
+  id bigint [pk, increment]
+  public_id char(26) [unique, not null]
+  tenant_id bigint [not null, ref: > tenants.id]
+  name varchar(255) [not null]
+  phone varchar(32) [not null]
+  email varchar(255)
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (tenant_id, phone) [unique]
+  }
+}
+
+Table appointments {
+  id bigint [pk, increment]
+  public_id char(26) [unique, not null]
+  tenant_id bigint [not null, ref: > tenants.id]
+  branch_id bigint [not null, ref: > branches.id]
+  staff_id bigint [not null, ref: > staff_profiles.id]
+  customer_id bigint [not null, ref: > customers.id]
+  created_by bigint [ref: > users.id]
+  starts_at datetime [not null]
+  ends_at datetime [not null]
+  status varchar(32) [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (tenant_id, staff_id, starts_at, ends_at) [name: 'appointments_tenant_staff_window_index']
+  }
+}
+
+Table appointment_services {
+  id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.id]
+  appointment_id bigint [not null, ref: > appointments.id]
+  service_id bigint [not null, ref: > services.id]
+  position int [not null]
+  duration_minutes int [not null]
+  price_amount int [not null]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table invitations {
+  id bigint [pk, increment]
+  tenant_id bigint [not null, ref: > tenants.id]
+  email varchar(255) [not null]
+  role varchar(32) [not null]
+  token_hash varchar(64) [unique, not null]
+  expires_at datetime [not null]
+  accepted_at datetime
+  invited_by bigint [not null, ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+}
