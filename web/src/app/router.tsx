@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes, Link } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
 import { getSession } from '../auth/session'
@@ -54,7 +54,7 @@ function NotificationBell() {
   }
 
   return (
-    <div>
+    <div className="bell">
       <button type="button">Thông báo</button>
       <ul>
         {items
@@ -71,25 +71,39 @@ function NotificationBell() {
   )
 }
 
+function RequireSession() {
+  if (getSession().user === null) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <AppShell />
+}
+
 function AppShell() {
   return (
-    <div className="screen">
-      <nav>
-        <Link to="/app/branches">Chi nhánh</Link>
-        <Link to="/app/services">Dịch vụ</Link>
-        <Link to="/app/staff">Nhân viên</Link>
-        <Link to="/app/appointments">Lịch hẹn</Link>
-        <Link to="/app/reports">Báo cáo</Link>
-        <NotificationBell />
-      </nav>
-      <Outlet />
+    <div className="desk">
+      <aside className="rail">
+        <p className="mark">Sổ lịch</p>
+        <p className="mark-sub">Lễ tân</p>
+        <nav>
+          <NavLink to="/app/branches">Chi nhánh</NavLink>
+          <NavLink to="/app/services">Dịch vụ</NavLink>
+          <NavLink to="/app/staff">Nhân viên</NavLink>
+          <NavLink to="/app/appointments">Lịch hẹn</NavLink>
+          <NavLink to="/app/reports">Báo cáo</NavLink>
+        </nav>
+      </aside>
+      <div className="desk-main">
+        <header className="desk-bar">
+          <NotificationBell />
+        </header>
+        <Outlet />
+      </div>
     </div>
   )
 }
 
 export function AppRouter() {
-  const signedIn = getSession().user !== null
-
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
@@ -97,7 +111,7 @@ export function AppRouter() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/invitations/:token" element={<InvitationPage />} />
       <Route path="/t/:slug" element={<PublicBookingPage />} />
-      <Route path="/app" element={signedIn ? <AppShell /> : <Navigate to="/login" replace />}>
+      <Route path="/app" element={<RequireSession />}>
         <Route index element={<h1>Lịch hẹn</h1>} />
         <Route path="branches" element={<BranchesPage />} />
         <Route path="services" element={<ServicesPage />} />

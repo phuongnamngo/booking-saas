@@ -43,7 +43,8 @@ export function RegisterPage() {
   }
 
   return (
-    <main>
+    <main className="stage">
+      <p className="mark">Sổ lịch</p>
       <form onSubmit={onSubmit}>
         <h1>Đăng ký</h1>
         {error ? <p role="alert">{error}</p> : null}
@@ -70,10 +71,10 @@ export function RegisterPage() {
         <button type="submit" disabled={pending}>
           {pending ? 'Đang tạo...' : 'Tạo tài khoản'}
         </button>
+        <p>
+          <Link to="/login">Đăng nhập</Link>
+        </p>
       </form>
-      <p>
-        <Link to="/login">Đăng nhập</Link>
-      </p>
     </main>
   )
 }

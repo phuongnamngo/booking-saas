@@ -54,8 +54,14 @@ export function ReportsPage() {
     <section className="screen">
       <h1>Báo cáo</h1>
       {error ? <p role="alert">{error}</p> : null}
-      {revenue !== null ? <p>{revenue}</p> : null}
-      <button type="button" onClick={() => void exportCsv()}>
+      {revenue !== null ? (
+        <p className="figure">
+          <span>Doanh thu</span>
+          <strong>{revenue}</strong>
+          <span>đ</span>
+        </p>
+      ) : null}
+      <button className="primary" type="button" onClick={() => void exportCsv()}>
         Xuất CSV
       </button>
     </section>

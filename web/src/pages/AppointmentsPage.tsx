@@ -26,6 +26,18 @@ function today(): string {
   return `${now.getFullYear()}-${month}-${day}`
 }
 
+function clock(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return iso
+  }
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
 function addDays(isoDate: string, days: number): string {
   const [year, month, day] = isoDate.split('-').map(Number)
   const date = new Date(year, month - 1, day)
@@ -207,20 +219,7 @@ export function AppointmentsPage() {
       <h1>Lịch hẹn</h1>
       {error ? <p role="alert">{error}</p> : null}
       {loading ? <p>Đang tải</p> : null}
-      <label>
-        Ngày
-        <input
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
-      </label>
-      <button type="button" onClick={() => setView('day')}>
-        Ngày
-      </button>
-      <button type="button" onClick={() => setView('week')}>
-        Tuần
-      </button>
+      <div className="toolbar">
       <label>
         Chi nhánh
         <select
@@ -238,15 +237,39 @@ export function AppointmentsPage() {
           ))}
         </select>
       </label>
+      <label>
+        Ngày
+        <input
+          type="date"
+          value={date}
+          onChange={(event) => setDate(event.target.value)}
+        />
+      </label>
+      <div className="segment">
+        <button type="button" aria-pressed={view === 'day'} onClick={() => setView('day')}>
+          Ngày
+        </button>
+        <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>
+          Tuần
+        </button>
+      </div>
+      </div>
       {!loading && appointments.length === 0 ? <p>Chưa có lịch hẹn</p> : null}
-      <ul>
+      <ul className="appt-list">
         {appointments.map((appointment) => (
-          <li key={appointment.id}>
-            <span>{appointment.status}</span> · {appointment.starts_at}
-            <button type="button" disabled={pending} onClick={() => void cancel(appointment)}>
+          <li className="appt" key={appointment.id}>
+            <time className="appt-time" dateTime={appointment.starts_at}>
+              {clock(appointment.starts_at)}
+            </time>
+            <div>
+              <span>{appointment.status}</span>
+              <p className="mute">{appointment.starts_at}</p>
+            </div>
+            <div className="appt-actions">
+            <button className="danger" type="button" disabled={pending} onClick={() => void cancel(appointment)}>
               Hủy
             </button>
-            <button type="button" disabled={pending} onClick={() => void pay(appointment)}>
+            <button className="primary" type="button" disabled={pending} onClick={() => void pay(appointment)}>
               Thanh toán
             </button>
             {checkoutUrls[appointment.id] ? (
@@ -262,6 +285,7 @@ export function AppointmentsPage() {
                 {status}
               </button>
             ))}
+            </div>
           </li>
         ))}
       </ul>

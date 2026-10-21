@@ -39,7 +39,8 @@ export function InvitationPage() {
   }
 
   return (
-    <main>
+    <main className="stage">
+      <p className="mark">Sổ lịch</p>
       <form onSubmit={onSubmit}>
         <h1>Nhận lời mời</h1>
         {error ? <p role="alert">{error}</p> : null}

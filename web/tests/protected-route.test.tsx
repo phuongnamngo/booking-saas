@@ -1,9 +1,27 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { expect, it } from 'vitest'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { AppRouter } from '../src/app/router'
+import { clearSession, setSession } from '../src/auth/session'
+
+function EnterDesk() {
+  const navigate = useNavigate()
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setSession({ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', name: 'An', email: 'demo@example.com' })
+        navigate('/app')
+      }}
+    >
+      Vào quầy
+    </button>
+  )
+}
 
 it('sends /app to the login heading when there is no session', async () => {
+  clearSession()
   render(
     <MemoryRouter initialEntries={['/app']}>
       <AppRouter />
@@ -11,4 +29,18 @@ it('sends /app to the login heading when there is no session', async () => {
   )
 
   expect(await screen.findByRole('heading', { name: 'Đăng nhập' })).toBeInTheDocument()
+})
+
+it('opens the desk after the session is set and the route changes', async () => {
+  clearSession()
+  render(
+    <MemoryRouter initialEntries={['/login']}>
+      <EnterDesk />
+      <AppRouter />
+    </MemoryRouter>,
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'Vào quầy' }))
+
+  expect(await screen.findByRole('heading', { name: 'Lịch hẹn' })).toBeInTheDocument()
 })

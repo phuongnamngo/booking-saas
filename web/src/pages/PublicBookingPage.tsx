@@ -179,10 +179,11 @@ export function PublicBookingPage() {
   const chosenStaff = staff.find((item) => item.id === staffId)
 
   return (
-    <main className="wizard">
+    <main className="stage wizard">
+      <p className="mark">Sổ lịch</p>
       <h1>Đặt lịch</h1>
       {bookingId ? (
-        <section>
+        <section className="sheet">
           <p>Đã đặt lịch.</p>
           <p>
             Mã lịch <strong>{bookingId}</strong>
@@ -190,14 +191,14 @@ export function PublicBookingPage() {
           <p>
             Giờ đã chọn <time dateTime={startsAt}>{formatWhen(startsAt)}</time>
           </p>
-          <button type="button" disabled={pending} onClick={() => void pay()}>
+          <button className="primary" type="button" disabled={pending} onClick={() => void pay()}>
             Thanh toán
           </button>
           {checkoutUrl ? <a href={checkoutUrl}>Thanh toán</a> : null}
         </section>
       ) : (
         <>
-          <ol>
+          <ol className="steps">
             {steps.map((label, index) => (
               <li key={label} aria-current={index === step ? 'step' : undefined}>
                 {label}
@@ -208,7 +209,7 @@ export function PublicBookingPage() {
           {loading ? <p>Đang tải</p> : null}
 
           {step === 0 ? (
-            <section>
+            <section className="sheet">
               <h2>Chọn chi nhánh</h2>
               {!loading && error === null && branches.length === 0 ? <p>Chưa có chi nhánh</p> : null}
               {branches.map((item) => (
@@ -222,14 +223,14 @@ export function PublicBookingPage() {
                   {item.name}
                 </label>
               ))}
-              <button type="button" disabled={branchId === ''} onClick={() => void loadServices()}>
+              <button className="primary" type="button" disabled={branchId === ''} onClick={() => void loadServices()}>
                 Tiếp
               </button>
             </section>
           ) : null}
 
           {step === 1 ? (
-            <section>
+            <section className="sheet">
               <h2>Chọn dịch vụ</h2>
               {services.map((item) => (
                 <label key={item.id}>
@@ -244,14 +245,14 @@ export function PublicBookingPage() {
               <button type="button" onClick={() => setStep(0)}>
                 Quay lại
               </button>
-              <button type="button" disabled={serviceIds.length === 0} onClick={() => void loadStaff()}>
+              <button className="primary" type="button" disabled={serviceIds.length === 0} onClick={() => void loadStaff()}>
                 Tiếp
               </button>
             </section>
           ) : null}
 
           {step === 2 ? (
-            <section>
+            <section className="sheet">
               <h2>Chọn nhân viên</h2>
               {!loading && staff.length === 0 ? <p>Chưa có nhân viên</p> : null}
               {staff.map((item) => (
@@ -268,14 +269,14 @@ export function PublicBookingPage() {
               <button type="button" onClick={() => setStep(1)}>
                 Quay lại
               </button>
-              <button type="button" disabled={staffId === ''} onClick={() => setStep(3)}>
+              <button className="primary" type="button" disabled={staffId === ''} onClick={() => setStep(3)}>
                 Tiếp
               </button>
             </section>
           ) : null}
 
           {step === 3 ? (
-            <section>
+            <section className="sheet">
               <h2>Chọn ngày và giờ</h2>
               <label>
                 Ngày
@@ -296,14 +297,14 @@ export function PublicBookingPage() {
               <button type="button" onClick={() => setStep(2)}>
                 Quay lại
               </button>
-              <button type="button" disabled={startsAt === ''} onClick={() => setStep(4)}>
+              <button className="primary" type="button" disabled={startsAt === ''} onClick={() => setStep(4)}>
                 Tiếp
               </button>
             </section>
           ) : null}
 
           {step === 4 ? (
-            <section>
+            <section className="sheet">
               <h2>Thông tin khách</h2>
               <label>
                 Tên
@@ -320,14 +321,19 @@ export function PublicBookingPage() {
               <button type="button" onClick={() => setStep(3)}>
                 Quay lại
               </button>
-              <button type="button" disabled={name.trim() === '' || phone.trim() === ''} onClick={() => setStep(5)}>
+              <button
+                className="primary"
+                type="button"
+                disabled={name.trim() === '' || phone.trim() === ''}
+                onClick={() => setStep(5)}
+              >
                 Tiếp
               </button>
             </section>
           ) : null}
 
           {step === 5 ? (
-            <section>
+            <section className="sheet">
               <h2>Xác nhận</h2>
               <p>{branch?.name}</p>
               <p>{chosenServices.map((item) => item.name).join(', ')}</p>
@@ -341,7 +347,7 @@ export function PublicBookingPage() {
               <button type="button" onClick={() => setStep(4)}>
                 Quay lại
               </button>
-              <button type="button" disabled={pending} onClick={() => void confirm()}>
+              <button className="primary" type="button" disabled={pending} onClick={() => void confirm()}>
                 {pending ? 'Đang đặt...' : 'Đặt lịch'}
               </button>
             </section>

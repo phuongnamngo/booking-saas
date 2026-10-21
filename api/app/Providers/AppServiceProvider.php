@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Auth\TenantEloquentUserProvider;
 use App\Services\FakePaymentGateway;
 use App\Services\PaymentGateway;
 use App\Services\StripePaymentGateway;
@@ -9,6 +10,7 @@ use App\Support\TenantContext;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,6 +36,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Auth::provider('tenant-eloquent', function ($app, array $config): TenantEloquentUserProvider {
+            return new TenantEloquentUserProvider($app['hash'], $config['model']);
+        });
+
         JsonResource::withoutWrapping();
 
         RateLimiter::for('login', function (Request $request): Limit {

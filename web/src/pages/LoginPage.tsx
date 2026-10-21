@@ -37,7 +37,8 @@ export function LoginPage() {
   }
 
   return (
-    <main>
+    <main className="stage">
+      <p className="mark">Sổ lịch</p>
       <form onSubmit={onSubmit}>
         <h1>Đăng nhập</h1>
         {error ? <p role="alert">{error}</p> : null}
@@ -52,10 +53,10 @@ export function LoginPage() {
         <button type="submit" disabled={pending}>
           {pending ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
+        <p>
+          <Link to="/register">Đăng ký</Link>
+        </p>
       </form>
-      <p>
-        <Link to="/register">Đăng ký</Link>
-      </p>
     </main>
   )
 }

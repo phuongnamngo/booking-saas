@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Support\TenantContext;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -45,6 +46,9 @@ class SessionTest extends TestCase
             'email' => 'an@example.com',
             'password' => 'password',
         ])->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        app(TenantContext::class)->forget();
 
         $this->withHeader('Referer', 'http://localhost:5173')
             ->getJson('/api/v1/auth/me')
