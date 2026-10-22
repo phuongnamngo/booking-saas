@@ -27,6 +27,7 @@ class InvitationTest extends TestCase
             'email' => 'owner@example.com',
             'password' => 'password',
         ])->assertCreated();
+        $this->verifyRegisteredUsers();
         $this->withHeader('Referer', 'http://localhost:5173')->get('/sanctum/csrf-cookie');
         $this->withHeaders([
             'Referer' => 'http://localhost:5173',

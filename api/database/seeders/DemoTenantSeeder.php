@@ -23,6 +23,8 @@ class DemoTenantSeeder extends Seeder
             'password' => 'password',
         ]);
 
+        $owner->forceFill(['email_verified_at' => now()])->save();
+
         $tenantId = $owner->tenant_id;
 
         $branch = Branch::query()->create([

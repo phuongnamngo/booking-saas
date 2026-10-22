@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\SlotUnavailableException;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\ResolveAuthenticatedTenant;
 use App\Http\Middleware\ResolvePublicTenant;
 use Illuminate\Foundation\Application;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant.public' => ResolvePublicTenant::class,
             'tenant.auth' => ResolveAuthenticatedTenant::class,
+            'super.admin' => EnsureSuperAdmin::class,
         ]);
         $middleware->prependToPriorityList(
             ThrottleRequests::class,

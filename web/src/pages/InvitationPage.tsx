@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ensureCsrfCookie } from '../api/client'
-import { setSession } from '../auth/session'
+import { sessionFromMe, type MeResponse, setSession } from '../auth/session'
 import { readApiError } from './readApiError'
 
 export function InvitationPage() {
@@ -24,12 +24,13 @@ export function InvitationPage() {
     setError(null)
     try {
       await ensureCsrfCookie()
-      const response = await api.post<{ id: string }>('/api/v1/invitations/accept', {
+      await api.post('/api/v1/invitations/accept', {
         token,
         name,
         password,
       })
-      setSession({ id: response.data.id, name, email: '' })
+      const me = await api.get<MeResponse>('/api/v1/auth/me')
+      setSession(sessionFromMe(me.data))
       navigate('/app')
     } catch (caught) {
       setError(readApiError(caught))

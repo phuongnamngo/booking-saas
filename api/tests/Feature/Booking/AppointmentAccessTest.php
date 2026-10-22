@@ -99,6 +99,7 @@ class AppointmentAccessTest extends TestCase
             'email' => 'owner@example.com',
             'password' => 'password',
         ])->assertCreated();
+        $this->verifyRegisteredUsers();
 
         $tenant = Tenant::query()->where('slug', 'spa-a')->firstOrFail();
         app(TenantContext::class)->set($tenant);

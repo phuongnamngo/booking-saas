@@ -13,6 +13,7 @@ use App\Models\StaffProfile;
 use App\Models\StaffWorkingHour;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\ManageToken;
 use App\Support\TenantContext;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -28,12 +29,29 @@ class AppointmentMailTest extends TestCase
         ['branch' => $branch, 'staff' => $staff, 'service' => $service] = $this->fixture();
         Mail::fake();
 
-        $this->postJson('/api/v1/public/spa-a/appointments', $this->payload($branch, $staff, $service, 'khach@example.com'))
+        $created = $this->postJson('/api/v1/public/spa-a/appointments', $this->payload($branch, $staff, $service, 'khach@example.com'))
             ->assertCreated();
+        $this->assertArrayNotHasKey('manage_token_hash', $created->json());
 
-        Mail::assertQueued(AppointmentConfirmedMail::class, function (AppointmentConfirmedMail $mail): bool {
-            return $mail->hasTo('khach@example.com') && $mail->hasTo('staff@example.com');
+        $sent = null;
+        Mail::assertQueued(AppointmentConfirmedMail::class, function (AppointmentConfirmedMail $mail) use (&$sent): bool {
+            if ($mail->hasTo('khach@example.com') && $mail->hasTo('staff@example.com')) {
+                $sent = $mail;
+
+                return true;
+            }
+
+            return false;
         });
+
+        $appointment = Appointment::query()->firstOrFail();
+        $this->assertSame(64, strlen((string) $appointment->manage_token_hash));
+        $this->assertNotSame($sent->token, $appointment->manage_token_hash);
+        $this->assertTrue(ManageToken::matches($appointment, $sent->token));
+        $this->assertStringContainsString(
+            'http://localhost:5173/t/spa-a/appointments/'.$appointment->public_id.'?token='.$sent->token,
+            $sent->render(),
+        );
     }
 
     public function test_guest_booking_without_email_still_queues_staff_mail(): void
@@ -45,6 +63,7 @@ class AppointmentMailTest extends TestCase
             ->assertCreated();
 
         $this->assertSame(1, Appointment::query()->count());
+        $this->assertSame(64, strlen((string) Appointment::query()->firstOrFail()->manage_token_hash));
         Mail::assertNotQueued(AppointmentConfirmedMail::class, fn (AppointmentConfirmedMail $mail): bool => $mail->hasTo('khach@example.com'));
         Mail::assertQueued(AppointmentConfirmedMail::class, fn (AppointmentConfirmedMail $mail): bool => $mail->hasTo('staff@example.com'));
     }
@@ -59,12 +78,21 @@ class AppointmentMailTest extends TestCase
             'email' => 'owner@example.com',
             'password' => 'password',
         ])->assertCreated();
+        $this->verifyRegisteredUsers();
 
         ['branch' => $branch, 'staff' => $staff, 'service' => $service] = $this->fixture(registerTenant: false);
         Mail::fake();
 
         $created = $this->postJson('/api/v1/public/spa-a/appointments', $this->payload($branch, $staff, $service, 'khach@example.com'))
             ->assertCreated();
+        $confirmed = null;
+        Mail::assertQueued(AppointmentConfirmedMail::class, function (AppointmentConfirmedMail $mail) use (&$confirmed): bool {
+            $confirmed = $mail;
+
+            return true;
+        });
+        $appointment = Appointment::query()->where('public_id', $created->json('id'))->firstOrFail();
+        $hashAtCreate = $appointment->manage_token_hash;
 
         $this->withHeader('Referer', 'http://localhost:5173')->get('/sanctum/csrf-cookie');
         $this->withHeaders([
@@ -81,13 +109,24 @@ class AppointmentMailTest extends TestCase
             ])
             ->assertOk();
 
-        Mail::assertQueued(AppointmentRescheduledMail::class, function (AppointmentRescheduledMail $mail): bool {
-            return $mail->hasTo('khach@example.com') && $mail->hasTo('staff@example.com');
+        $appointment->refresh();
+        $this->assertNotSame($hashAtCreate, $appointment->manage_token_hash);
+        $this->assertFalse(ManageToken::matches($appointment, $confirmed->token));
+
+        Mail::assertQueued(AppointmentRescheduledMail::class, function (AppointmentRescheduledMail $mail) use ($appointment): bool {
+            return $mail->hasTo('khach@example.com')
+                && $mail->hasTo('staff@example.com')
+                && ManageToken::matches($appointment, $mail->token)
+                && str_contains($mail->render(), 'http://localhost:5173/t/spa-a/appointments/'.$appointment->public_id.'?token='.$mail->token);
         });
+
+        $hashAfterReschedule = $appointment->manage_token_hash;
 
         $this->withHeader('Referer', 'http://localhost:5173')
             ->postJson('/api/v1/appointments/'.$created->json('id').'/cancel')
             ->assertOk();
+
+        $this->assertSame($hashAfterReschedule, $appointment->fresh()->manage_token_hash);
 
         Mail::assertQueued(AppointmentCancelledMail::class, function (AppointmentCancelledMail $mail): bool {
             return $mail->hasTo('khach@example.com') && $mail->hasTo('staff@example.com');

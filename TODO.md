@@ -2,12 +2,12 @@
 
 Việc được hoãn có chủ đích, ngoài change hiện tại. Các mục còn lại của `docs/PLAN.md` giữ nguyên trên plan, không ghi lại ở đây.
 
-## Tài khoản Customer và tự đổi hoặc hủy lịch
+## Tài khoản Customer
 
-- Kết quả: khách có user trong tenant, đăng nhập trên `/t/{slug}`, đổi và hủy lịch của mình. Hủy trước 24 giờ thì được, sau mốc đó thì bị từ chối.
-- Lý do hoãn: change `platform-booking-core` chốt khách vãng lai, không tạo role Customer.
-- Change gốc: `platform-booking-core`.
-- Cách làm tiếp: thêm đăng ký customer tách khỏi đăng ký owner. Customer chỉ thấy appointment gắn với user của mình. Policy hủy đọc mốc 24 giờ theo timezone chi nhánh.
+- Kết quả: khách có user trong tenant, đăng nhập trên `/t/{slug}`, và xem lịch sử của mình.
+- Lý do hoãn: `complete-core-ae` làm khách đổi và hủy bằng manage token trên một lịch, không tạo role Customer. Hồ sơ, lịch sử và ghi chú nội bộ vẫn thuộc mục H của `docs/PLAN.md`.
+- Change gốc: `platform-booking-core`. Phần đổi/hủy và mốc 24 giờ chuyển vào `complete-core-ae`.
+- Cách làm tiếp: đăng ký customer tách khỏi owner. Customer chỉ thấy appointment gắn với user của mình. Không làm lại token, mốc 24 giờ, hay route công khai của `complete-core-ae`.
 
 ## Tenant theo subdomain
 
@@ -18,7 +18,7 @@ Việc được hoãn có chủ đích, ngoài change hiện tại. Các mục c
 
 ## Visual pass cho layout admin và trang đặt lịch
 
-- Kết quả: một hướng visual được chốt qua skill sketch, rồi áp lên các route đã có: login, register, `/app/*`, wizard `/t/:slug`.
-- Lý do hoãn: skill sketch không có trong workspace. Change `platform-booking-core` không chọn design system thay thế, chỉ giao HTML và CSS đủ để các luồng chạy.
-- Change gốc: `platform-booking-core`.
+- Kết quả: một hướng visual được chốt qua skill sketch, rồi áp lên các route đã có: login, register, `/app/*`, wizard `/t/:slug`, cùng các route mới của `complete-core-ae` (`/forgot-password`, `/reset-password`, `/verify-email`, `/app/profile`, `/admin`, `/t/:slug/appointments/:id`).
+- Lý do hoãn: skill sketch không có trong workspace. `platform-booking-core` và `complete-core-ae` không chọn design system thay thế. Màn mới dùng lại form đăng nhập, khung `/app` và trang đặt lịch công khai.
+- Change gốc: `platform-booking-core`. `complete-core-ae` thêm route vào cùng hàng đợi.
 - Cách làm tiếp: mở sketch, user chọn một phương án, đóng session, rồi đổi presentation của các route đó mà không đổi hợp đồng API.

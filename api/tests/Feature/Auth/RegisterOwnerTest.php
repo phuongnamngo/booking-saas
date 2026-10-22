@@ -28,6 +28,7 @@ class RegisterOwnerTest extends TestCase
         $this->assertDatabaseCount('users', 1);
 
         $user = User::withoutGlobalScope('tenant')->first();
+        $this->assertNull($user->email_verified_at);
         setPermissionsTeamId($user->tenant_id);
 
         $this->assertTrue($user->hasRole('owner'));

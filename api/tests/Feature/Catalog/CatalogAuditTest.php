@@ -24,6 +24,7 @@ class CatalogAuditTest extends TestCase
             'email' => 'owner@example.com',
             'password' => 'password',
         ])->assertCreated();
+        $this->verifyRegisteredUsers();
         $this->login('owner@example.com');
 
         $branchId = $this->withHeader('Referer', 'http://localhost:5173')

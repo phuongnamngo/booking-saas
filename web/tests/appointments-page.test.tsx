@@ -22,7 +22,7 @@ beforeEach(() => {
 })
 
 it('shows a pending appointment', async () => {
-  setSession({ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', name: 'An', email: 'a@example.com' })
+  setSession({ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', name: 'An', email: 'a@example.com', isSuperAdmin: false, emailVerifiedAt: '2026-10-22T00:00:00+00:00' })
   vi.mocked(api.get).mockResolvedValue({
     data: [
       {
@@ -44,7 +44,7 @@ it('shows a pending appointment', async () => {
 })
 
 it('requests a week range when Tuần is clicked', async () => {
-  setSession({ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', name: 'An', email: 'a@example.com' })
+  setSession({ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', name: 'An', email: 'a@example.com', isSuperAdmin: false, emailVerifiedAt: '2026-10-22T00:00:00+00:00' })
   vi.mocked(api.get).mockResolvedValue({
     data: [
       {

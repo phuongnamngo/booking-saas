@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasPublicId;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,12 +18,12 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'tenant_id'])]
+#[Fillable(['name', 'email', 'password', 'tenant_id', 'is_super_admin'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmailContract
 {
     /** @use HasFactory<UserFactory> */
-    use BelongsToTenant, HasApiTokens, HasFactory, HasPublicId, HasRoles, Notifiable;
+    use BelongsToTenant, HasApiTokens, HasFactory, HasPublicId, HasRoles, MustVerifyEmail, Notifiable;
 
     public function tenant(): BelongsTo
     {
@@ -48,6 +49,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_super_admin' => 'boolean',
             'password' => 'hashed',
         ];
     }

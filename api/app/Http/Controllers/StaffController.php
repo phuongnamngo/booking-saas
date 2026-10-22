@@ -8,6 +8,7 @@ use App\Models\Service;
 use App\Models\StaffProfile;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\PlanLimiter;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -80,6 +81,10 @@ class StaffController extends Controller
         ]);
 
         return DB::transaction(function () use ($request, $data, $profile, $tenantId): StaffProfile {
+            if (! $profile->exists) {
+                app(PlanLimiter::class)->assertCanCreate('staff');
+            }
+
             $user = User::query()->where('public_id', $data['user_id'])->firstOrFail();
 
             $duplicate = StaffProfile::query()

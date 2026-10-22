@@ -132,6 +132,9 @@ class StaffAssignmentTest extends TestCase
             'email' => $email,
             'password' => 'password',
         ])->assertCreated();
+        $this->verifyRegisteredUsers();
+
+        Tenant::query()->where('slug', $slug)->update(['plan' => 'pro']);
 
         $this->login($email);
     }

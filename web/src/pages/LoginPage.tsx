@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, ensureCsrfCookie } from '../api/client'
-import { setSession } from '../auth/session'
+import { sessionFromMe, type MeResponse, setSession } from '../auth/session'
 import { readApiError } from './readApiError'
 
 export function LoginPage() {
@@ -23,11 +23,12 @@ export function LoginPage() {
     setError(null)
     try {
       await ensureCsrfCookie()
-      const response = await api.post<{ id: string }>('/api/v1/auth/login', {
+      await api.post('/api/v1/auth/login', {
         email,
         password,
       })
-      setSession({ id: response.data.id, name: email, email })
+      const me = await api.get<MeResponse>('/api/v1/auth/me')
+      setSession(sessionFromMe(me.data))
       navigate('/app')
     } catch (caught) {
       setError(readApiError(caught))
@@ -53,6 +54,9 @@ export function LoginPage() {
         <button type="submit" disabled={pending}>
           {pending ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
+        <p>
+          <Link to="/forgot-password">Quên mật khẩu</Link>
+        </p>
         <p>
           <Link to="/register">Đăng ký</Link>
         </p>

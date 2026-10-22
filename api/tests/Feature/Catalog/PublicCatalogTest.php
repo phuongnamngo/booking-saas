@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Catalog;
 
+use App\Models\Tenant;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -27,6 +28,9 @@ class PublicCatalogTest extends TestCase
             'email' => 'a@example.com',
             'password' => 'password',
         ])->assertCreated();
+        $this->verifyRegisteredUsers();
+
+        Tenant::query()->where('slug', 'spa-a')->update(['plan' => 'pro']);
 
         $this->withHeader('Referer', 'http://localhost:5173')->get('/sanctum/csrf-cookie');
         $this->withHeaders([

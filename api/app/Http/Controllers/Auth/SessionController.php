@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +28,12 @@ class SessionController extends Controller
             ], 422);
         }
 
+        if ($user->tenant?->isSuspended()) {
+            return response()->json([
+                'message' => 'Tenant đang bị khóa.',
+            ], 403);
+        }
+
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
 
@@ -37,7 +44,15 @@ class SessionController extends Controller
 
     public function show(Request $request): UserResource
     {
-        return new UserResource($request->user()->load('tenant'));
+        $user = $request->user();
+
+        if ($user->tenant_id !== null) {
+            $user->load('tenant');
+            app(TenantContext::class)->set($user->tenant);
+            setPermissionsTeamId($user->tenant_id);
+        }
+
+        return new UserResource($user);
     }
 
     public function destroy(Request $request): JsonResponse

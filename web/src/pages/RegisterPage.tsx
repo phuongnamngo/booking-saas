@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, ensureCsrfCookie } from '../api/client'
-import { setSession } from '../auth/session'
+import { sessionFromMe, type MeResponse, setSession } from '../auth/session'
 import { readApiError } from './readApiError'
 
 export function RegisterPage() {
@@ -22,18 +22,15 @@ export function RegisterPage() {
     setError(null)
     try {
       await ensureCsrfCookie()
-      const response = await api.post<{ id: string }>('/api/v1/auth/register', {
+      await api.post('/api/v1/auth/register', {
         business_name: String(form.get('business_name') ?? ''),
         slug: String(form.get('slug') ?? ''),
         name: String(form.get('name') ?? ''),
         email,
         password: String(form.get('password') ?? ''),
       })
-      setSession({
-        id: response.data.id,
-        name: String(form.get('name') ?? ''),
-        email,
-      })
+      const me = await api.get<MeResponse>('/api/v1/auth/me')
+      setSession(sessionFromMe(me.data))
       navigate('/app')
     } catch (caught) {
       setError(readApiError(caught))

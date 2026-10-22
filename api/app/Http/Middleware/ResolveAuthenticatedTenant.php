@@ -24,6 +24,10 @@ class ResolveAuthenticatedTenant
             abort(403);
         }
 
+        if ($tenant->isSuspended()) {
+            abort(403, 'Tenant đang bị khóa.');
+        }
+
         app(TenantContext::class)->set($tenant);
         setPermissionsTeamId($tenant->id);
 

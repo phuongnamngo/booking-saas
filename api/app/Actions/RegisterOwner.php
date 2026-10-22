@@ -15,7 +15,7 @@ class RegisterOwner
      */
     public function handle(array $data): User
     {
-        return DB::transaction(function () use ($data): User {
+        $user = DB::transaction(function () use ($data): User {
             $tenant = Tenant::query()->create([
                 'name' => $data['business_name'],
                 'slug' => $data['slug'],
@@ -50,5 +50,9 @@ class RegisterOwner
 
             return $user;
         });
+
+        $user->sendEmailVerificationNotification();
+
+        return $user;
     }
 }

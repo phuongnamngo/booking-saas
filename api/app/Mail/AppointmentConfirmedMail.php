@@ -14,7 +14,7 @@ class AppointmentConfirmedMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Appointment $appointment) {}
+    public function __construct(public Appointment $appointment, public string $token) {}
 
     public function envelope(): Envelope
     {

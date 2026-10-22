@@ -108,6 +108,7 @@ class ReviewTest extends TestCase
                 'email' => 'owner@example.com',
                 'password' => 'password',
             ])->assertCreated();
+            $this->verifyRegisteredUsers();
         }
 
         $tenant = Tenant::query()->where('slug', 'spa-a')->firstOrFail();

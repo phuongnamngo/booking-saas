@@ -23,7 +23,7 @@ beforeEach(() => {
 })
 
 it('shows revenue and posts a csv export', async () => {
-  setSession({ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', name: 'An', email: 'a@example.com' })
+  setSession({ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', name: 'An', email: 'a@example.com', isSuperAdmin: false, emailVerifiedAt: '2026-10-22T00:00:00+00:00' })
   vi.mocked(api.get).mockImplementation(async (url: string) => {
     if (url === '/api/v1/reports') {
       return { data: { revenue: 100000 } }

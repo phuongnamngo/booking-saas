@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\TenantAdminController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\SessionController;
 use App\Http\Controllers\AvailabilityController;
@@ -9,6 +13,7 @@ use App\Http\Controllers\BranchScheduleController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Public\AppointmentManageController;
 use App\Http\Controllers\Public\CatalogController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportExportController;
@@ -37,10 +42,26 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/register', [RegisterController::class, 'store']);
     Route::post('/auth/login', [SessionController::class, 'store'])->middleware('throttle:login');
     Route::post('/auth/logout', [SessionController::class, 'destroy']);
+    Route::post('/auth/forgot-password', [PasswordResetController::class, 'store'])->middleware('throttle:password-reset');
+    Route::post('/auth/reset-password', [PasswordResetController::class, 'update']);
     Route::post('/invitations/accept', [InvitationController::class, 'accept']);
 
-    Route::middleware(['auth:sanctum', 'tenant.auth'])->group(function () {
+    Route::get('/auth/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware('signed')
+        ->name('verification.verify');
+
+    Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [SessionController::class, 'show']);
+        Route::patch('/auth/profile', [ProfileController::class, 'update']);
+        Route::put('/auth/password', [ProfileController::class, 'updatePassword']);
+        Route::post('/auth/email/verification-notification', [EmailVerificationController::class, 'resend']);
+    });
+
+    Route::middleware(['auth:sanctum', 'super.admin'])->prefix('admin')->group(function () {
+        Route::get('tenants', [TenantAdminController::class, 'index']);
+        Route::patch('tenants/{tenant}', [TenantAdminController::class, 'update']);
+        Route::post('tenants/{tenant}/suspend', [TenantAdminController::class, 'suspend']);
+        Route::post('tenants/{tenant}/unsuspend', [TenantAdminController::class, 'unsuspend']);
     });
 
     Route::prefix('public/{slug}')->middleware('tenant.public')->group(function () {
@@ -49,12 +70,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/staff', [CatalogController::class, 'staff']);
         Route::get('/availability', AvailabilityController::class);
         Route::post('/appointments', [AppointmentController::class, 'store'])->middleware('throttle:booking');
+        Route::get('/appointments/{appointment}', [AppointmentManageController::class, 'show']);
+        Route::post('/appointments/{appointment}/cancel', [AppointmentManageController::class, 'cancel']);
+        Route::patch('/appointments/{appointment}', [AppointmentManageController::class, 'update']);
         Route::post('/appointments/{appointment}/checkout', [CheckoutController::class, 'store']);
         Route::post('/reviews', [ReviewController::class, 'store']);
         Route::post('/waitlist', [WaitlistController::class, 'store']);
     });
 
-    Route::middleware(['auth:sanctum', 'tenant.auth'])->group(function () {
+    Route::middleware(['auth:sanctum', 'tenant.auth', 'verified'])->group(function () {
         Route::apiResource('branches', BranchController::class);
         Route::put('branches/{branch}/opening-hours', [BranchScheduleController::class, 'replaceOpeningHours']);
         Route::post('branches/{branch}/holidays', [BranchScheduleController::class, 'storeHoliday']);

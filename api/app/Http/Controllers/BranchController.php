@@ -6,6 +6,7 @@ use App\Http\Requests\StoreBranchRequest;
 use App\Http\Resources\BranchResource;
 use App\Models\Branch;
 use App\Services\AuditLogger;
+use App\Services\PlanLimiter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -29,6 +30,7 @@ class BranchController extends Controller
     public function store(StoreBranchRequest $request): JsonResponse
     {
         $branch = DB::transaction(function () use ($request): Branch {
+            app(PlanLimiter::class)->assertCanCreate('branches');
             $branch = Branch::query()->create($request->validated());
             app(AuditLogger::class)->write($request->user(), 'branch.saved', $branch, null, $request->validated());
 

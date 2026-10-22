@@ -77,6 +77,7 @@ class ReportExportTest extends TestCase
             'email' => 'owner-b@example.com',
             'password' => 'password',
         ])->assertCreated();
+        $this->verifyRegisteredUsers();
         $this->logout();
         $this->login('owner-b@example.com');
         $this->withHeader('Referer', 'http://localhost:5173')
@@ -97,6 +98,7 @@ class ReportExportTest extends TestCase
             'email' => 'owner@example.com',
             'password' => 'password',
         ])->assertCreated();
+        $this->verifyRegisteredUsers();
 
         $tenant = Tenant::query()->where('slug', 'spa-a')->firstOrFail();
         app(TenantContext::class)->set($tenant);

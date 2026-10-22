@@ -11,7 +11,13 @@ function EnterDesk() {
     <button
       type="button"
       onClick={() => {
-        setSession({ id: '01ARZ3NDEKTSV4RRFFQ69G5FAV', name: 'An', email: 'demo@example.com' })
+        setSession({
+          id: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+          name: 'An',
+          email: 'demo@example.com',
+          isSuperAdmin: false,
+          emailVerifiedAt: '2026-10-22T00:00:00+00:00',
+        })
         navigate('/app')
       }}
     >
@@ -43,4 +49,42 @@ it('opens the desk after the session is set and the route changes', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Vào quầy' }))
 
   expect(await screen.findByRole('heading', { name: 'Lịch hẹn' })).toBeInTheDocument()
+})
+
+it('sends a super admin away from the desk', async () => {
+  clearSession()
+  setSession({
+    id: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    name: 'Root',
+    email: 'root@example.com',
+    isSuperAdmin: true,
+    emailVerifiedAt: '2026-10-22T00:00:00+00:00',
+  })
+  render(
+    <MemoryRouter initialEntries={['/app']}>
+      <AppRouter />
+    </MemoryRouter>,
+  )
+
+  expect(await screen.findByRole('heading', { name: 'Tenant' })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Chi nhánh' })).not.toBeInTheDocument()
+})
+
+it('shows a resend wall until the tenant email is verified', async () => {
+  clearSession()
+  setSession({
+    id: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    name: 'An',
+    email: 'a@example.com',
+    isSuperAdmin: false,
+    emailVerifiedAt: null,
+  })
+  render(
+    <MemoryRouter initialEntries={['/app/branches']}>
+      <AppRouter />
+    </MemoryRouter>,
+  )
+
+  expect(await screen.findByRole('button', { name: 'Gửi lại email xác thực' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Chi nhánh' })).not.toBeInTheDocument()
 })

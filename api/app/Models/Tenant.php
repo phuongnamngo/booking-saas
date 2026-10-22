@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'slug', 'timezone'])]
+#[Fillable(['name', 'slug', 'timezone', 'plan', 'suspended_at'])]
 class Tenant extends Model
 {
     /** @use HasFactory<TenantFactory> */
@@ -17,7 +17,14 @@ class Tenant extends Model
 
     protected function casts(): array
     {
-        return [];
+        return [
+            'suspended_at' => 'datetime',
+        ];
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
     }
 
     public function users(): HasMany

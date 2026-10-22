@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Service;
 use App\Models\StaffProfile;
 use App\Models\User;
+use App\Support\ManageToken;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -105,10 +106,11 @@ class AppointmentBooker
 
             $logger = app(AuditLogger::class);
             $logger->write($actor, 'appointment.created', $appointment, null, $logger->appointmentState($appointment));
+            $token = ManageToken::issue($appointment);
 
-            DB::afterCommit(function () use ($appointment): void {
+            DB::afterCommit(function () use ($appointment, $token): void {
                 app(AvailabilityCache::class)->forgetAppointment($appointment);
-                app(AppointmentSideEffects::class)->created($appointment);
+                app(AppointmentSideEffects::class)->created($appointment, $token);
             });
 
             return $appointment;
@@ -188,10 +190,11 @@ class AppointmentBooker
 
             $updated = $appointment->refresh();
             $logger->write($actor, 'appointment.rescheduled', $updated, $before, $logger->appointmentState($updated));
-            DB::afterCommit(function () use ($previousKey, $updated, $before): void {
+            $token = ManageToken::issue($updated);
+            DB::afterCommit(function () use ($previousKey, $updated, $before, $token): void {
                 Cache::forget($previousKey);
                 app(AvailabilityCache::class)->forgetAppointment($updated);
-                app(AppointmentSideEffects::class)->rescheduled($updated, $before['starts_at']);
+                app(AppointmentSideEffects::class)->rescheduled($updated, $before['starts_at'], $token);
             });
 
             return $updated;

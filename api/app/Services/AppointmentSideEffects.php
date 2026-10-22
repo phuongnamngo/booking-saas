@@ -22,15 +22,15 @@ use Spatie\Permission\Exceptions\RoleDoesNotExist;
 
 class AppointmentSideEffects
 {
-    public function created(Appointment $appointment): void
+    public function created(Appointment $appointment, string $manageToken): void
     {
-        $this->queue($appointment, new AppointmentConfirmedMail($appointment));
+        $this->queue($appointment, new AppointmentConfirmedMail($appointment, $manageToken));
         $this->notify($appointment, 'Lịch mới');
     }
 
-    public function rescheduled(Appointment $appointment, ?string $openedAt = null): void
+    public function rescheduled(Appointment $appointment, ?string $openedAt = null, ?string $manageToken = null): void
     {
-        $this->queue($appointment, new AppointmentRescheduledMail($appointment));
+        $this->queue($appointment, new AppointmentRescheduledMail($appointment, $manageToken ?? ''));
         $this->notify($appointment, 'Đổi giờ');
         $this->openWaitlist($appointment, $openedAt ?? $appointment->starts_at->toIso8601String());
     }

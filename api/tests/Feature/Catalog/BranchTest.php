@@ -62,6 +62,7 @@ class BranchTest extends TestCase
             'email' => $email,
             'password' => 'password',
         ])->assertCreated();
+        $this->verifyRegisteredUsers();
     }
 
     private function login(string $email): void
