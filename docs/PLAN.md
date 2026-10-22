@@ -23,66 +23,66 @@ Hệ thống đặt lịch hẹn multi-tenant cho spa, salon, phòng khám.
 ## 2. Danh sách tính năng
 
 ### A. Nền tảng và multi-tenancy
-- [ ] Đăng ký tenant (tạo owner + tenant), slug riêng (`/t/{slug}` hoặc subdomain)
-- [ ] Middleware xác định tenant, global scope theo `tenant_id`
-- [ ] Test cô lập dữ liệu giữa các tenant
-- [ ] Gói dịch vụ Free/Pro có giới hạn (số chi nhánh, số nhân viên)
-- [ ] Super Admin: danh sách tenant, khóa/mở tenant
+- [x] Đăng ký tenant (tạo owner + tenant), slug riêng (`/t/{slug}` hoặc subdomain)
+- [x] Middleware xác định tenant, global scope theo `tenant_id`
+- [x] Test cô lập dữ liệu giữa các tenant
+- [x] Gói dịch vụ Free/Pro có giới hạn (số chi nhánh, số nhân viên)
+- [x] Super Admin: danh sách tenant, khóa/mở tenant
 
 ### B. Xác thực và phân quyền
-- [ ] Đăng ký, đăng nhập, đăng xuất (Sanctum SPA cookie)
-- [ ] Quên mật khẩu, đặt lại mật khẩu, xác thực email
-- [ ] RBAC bằng Policy/Gate (spatie/laravel-permission)
-- [ ] Mời nhân viên qua email (invitation link có hạn)
-- [ ] Hồ sơ cá nhân, đổi mật khẩu
-- [ ] Rate limit cho login và đặt lịch
+- [x] Đăng ký, đăng nhập, đăng xuất (Sanctum SPA cookie)
+- [x] Quên mật khẩu, đặt lại mật khẩu, xác thực email
+- [x] RBAC bằng Policy/Gate (spatie/laravel-permission)
+- [x] Mời nhân viên qua email (invitation link có hạn)
+- [x] Hồ sơ cá nhân, đổi mật khẩu
+- [x] Rate limit cho login và đặt lịch
 
 ### C. Quản lý danh mục
-- [ ] Chi nhánh: thông tin, giờ mở cửa, ngày nghỉ lễ
-- [ ] Dịch vụ: tên, thời lượng, giá, danh mục, bật/tắt
-- [ ] Nhân viên: gán chi nhánh, gán dịch vụ có thể thực hiện
-- [ ] Ca làm việc: lịch tuần, ngoại lệ (nghỉ phép, đổi ca)
+- [x] Chi nhánh: thông tin, giờ mở cửa, ngày nghỉ lễ
+- [x] Dịch vụ: tên, thời lượng, giá, danh mục, bật/tắt
+- [x] Nhân viên: gán chi nhánh, gán dịch vụ có thể thực hiện
+- [x] Ca làm việc: lịch tuần, ngoại lệ (nghỉ phép, đổi ca)
 - [ ] Tài nguyên phòng/ghế (tùy chọn)
 
 ### D. Đặt lịch (phần lõi)
-- [ ] API khung giờ trống theo dịch vụ + nhân viên + chi nhánh (cache Redis)
-- [ ] Đặt lịch chống trùng: transaction + `lockForUpdate()` / `Cache::lock`
-- [ ] Trạng thái: pending → confirmed → in_progress → completed / cancelled / no_show
-- [ ] Đổi lịch, hủy lịch với chính sách hủy (ví dụ trước 24h)
-- [ ] Staff/manager đặt hộ khách, khách vãng lai
-- [ ] Nhiều dịch vụ trong một lịch hẹn
-- [ ] Waitlist khi hết slot, tự thông báo khi có slot trống
-- [ ] Idempotency key khi đặt lịch
+- [x] API khung giờ trống theo dịch vụ + nhân viên + chi nhánh (cache Redis)
+- [x] Đặt lịch chống trùng: transaction + `lockForUpdate()` / `Cache::lock`
+- [x] Trạng thái: pending → confirmed → in_progress → completed / cancelled / no_show
+- [x] Đổi lịch, hủy lịch với chính sách hủy (ví dụ trước 24h)
+- [x] Staff/manager đặt hộ khách, khách vãng lai
+- [x] Nhiều dịch vụ trong một lịch hẹn
+- [x] Waitlist khi hết slot, tự thông báo khi có slot trống
+- [x] Idempotency key khi đặt lịch
 
 ### E. Thông báo và job nền
-- [ ] Email xác nhận, đổi lịch, hủy lịch (queue)
-- [ ] Nhắc lịch trước 24h và 2h (scheduler + queue)
-- [ ] Thông báo in-app (notification bell)
-- [ ] Retry, failed job, Horizon dashboard
-- [ ] Tự động đánh dấu no-show quá giờ
+- [x] Email xác nhận, đổi lịch, hủy lịch (queue)
+- [x] Nhắc lịch trước 24h và 2h (scheduler + queue)
+- [x] Thông báo in-app (notification bell)
+- [x] Retry, failed job, Horizon dashboard
+- [x] Tự động đánh dấu no-show quá giờ
 
 ### F. Thanh toán
-- [ ] Đặt cọc/thanh toán qua Stripe (test mode)
-- [ ] Webhook idempotent, xác thực chữ ký
-- [ ] Hóa đơn/biên nhận, hoàn tiền khi hủy
-- [ ] Lịch sử giao dịch
+- [x] Đặt cọc/thanh toán qua Stripe (test mode)
+- [x] Webhook idempotent, xác thực chữ ký
+- [x] Hóa đơn/biên nhận, hoàn tiền khi hủy
+- [x] Lịch sử giao dịch
 
 ### G. Báo cáo và dashboard
-- [ ] Doanh thu theo ngày/tuần/tháng, theo dịch vụ, theo nhân viên
-- [ ] Tỷ lệ hủy/no-show, giờ cao điểm
-- [ ] Xuất CSV bằng queue
-- [ ] Cache báo cáo
+- [x] Doanh thu theo ngày/tuần/tháng, theo dịch vụ, theo nhân viên
+- [x] Tỷ lệ hủy/no-show, giờ cao điểm
+- [x] Xuất CSV bằng queue
+- [x] Cache báo cáo
 
 ### H. Đánh giá và khách hàng
-- [ ] Khách đánh giá sau khi hoàn thành
+- [x] Khách đánh giá sau khi hoàn thành
 - [ ] Hồ sơ khách hàng, lịch sử, ghi chú nội bộ
-- [ ] Audit log (ai sửa gì, lúc nào)
+- [x] Audit log (ai sửa gì, lúc nào)
 
 ### I. Giao diện React
-- [ ] Trang đặt lịch công khai theo tenant (dịch vụ → nhân viên → giờ → xác nhận)
-- [ ] Lịch tuần/ngày cho staff/manager
-- [ ] Trang quản trị: CRUD chi nhánh, dịch vụ, nhân viên, ca làm
-- [ ] Dashboard (Recharts), protected routes theo vai trò
+- [x] Trang đặt lịch công khai theo tenant (dịch vụ → nhân viên → giờ → xác nhận)
+- [x] Lịch tuần/ngày cho staff/manager
+- [x] Trang quản trị: CRUD chi nhánh, dịch vụ, nhân viên, ca làm
+- [x] Dashboard (Recharts), protected routes theo vai trò
 - [ ] Responsive, loading/error state, toast
 - [ ] Dark mode (tùy chọn)
 
@@ -107,7 +107,7 @@ Hệ thống đặt lịch hẹn multi-tenant cho spa, salon, phòng khám.
 | Danh mục | `branches`, `service_categories`, `services`, `staff_profiles`, `staff_services` |
 | Lịch làm việc | `working_hours`, `time_off`, `holidays` |
 | Đặt lịch | `customers`, `appointments`, `appointment_services`, `waitlist_entries` |
-| Thanh toán | `payments`, `refunds` |
+| Thanh toán | `payments`, `refunds`, `invoices` |
 | Khác | `reviews`, `notifications`, `audit_logs` |
 
 **Quy ước:**
@@ -146,7 +146,7 @@ Hệ thống đặt lịch hẹn multi-tenant cho spa, salon, phòng khám.
 - [x] Email, nhắc lịch, notification in-app, Horizon
 - [x] Cache Redis, tối ưu query, rate limiting, idempotency
 - [x] React: lịch tuần/ngày, notification bell
-- [ ] **Mốc:** bản chạy được A đến E, đưa vào CV ngay
+- [x] **Mốc:** bản chạy được A đến E, đưa vào CV ngay
 
 ### Tuần 4: Thanh toán, báo cáo, chất lượng
 - [x] Stripe test + webhook, hoàn tiền

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
+import { useToast } from '../app/toast'
 import { getSession, setSession } from '../auth/session'
 import { readApiError } from './readApiError'
 
@@ -8,6 +9,13 @@ export function ProfilePage() {
   const [nameMessage, setNameMessage] = useState<string | null>(null)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const showToast = useToast()
+
+  function reportError(caught: unknown) {
+    const message = readApiError(caught)
+    setError(message)
+    showToast('error', message)
+  }
 
   async function saveName(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -20,8 +28,9 @@ export function ProfilePage() {
         setSession({ ...user, name: response.data.name })
       }
       setNameMessage('Đã lưu tên.')
+      showToast('success', 'Đã lưu tên.')
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     }
   }
 
@@ -37,8 +46,9 @@ export function ProfilePage() {
         password_confirmation: String(form.get('password_confirmation') ?? ''),
       })
       setPasswordMessage('Đã đổi mật khẩu.')
+      showToast('success', 'Đã đổi mật khẩu.')
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     }
   }
 

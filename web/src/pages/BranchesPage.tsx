@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
+import { useToast } from '../app/toast'
 import { listFrom } from './listFrom'
 import { readApiError } from './readApiError'
 
@@ -19,6 +20,13 @@ export function BranchesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const showToast = useToast()
+
+  function reportError(caught: unknown) {
+    const message = readApiError(caught)
+    setError(message)
+    showToast('error', message)
+  }
 
   async function load() {
     setLoading(true)
@@ -27,7 +35,7 @@ export function BranchesPage() {
       const response = await api.get('/api/v1/branches')
       setBranches(listFrom<Branch>(response.data))
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setLoading(false)
     }
@@ -44,7 +52,7 @@ export function BranchesPage() {
         }
       } catch (caught) {
         if (!cancelled) {
-          setError(readApiError(caught))
+          reportError(caught)
         }
       } finally {
         if (!cancelled) {
@@ -60,7 +68,8 @@ export function BranchesPage() {
 
   async function createBranch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     setPending(true)
     setError(null)
     try {
@@ -71,10 +80,11 @@ export function BranchesPage() {
         address: String(form.get('address') ?? '') || null,
         phone: String(form.get('phone') ?? '') || null,
       })
-      event.currentTarget.reset()
+      showToast('success', 'Đã tạo chi nhánh.')
+      formElement.reset()
       await load()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -97,8 +107,9 @@ export function BranchesPage() {
           },
         ],
       })
+      showToast('success', 'Đã lưu giờ.')
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -106,7 +117,8 @@ export function BranchesPage() {
 
   async function addHoliday(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     const branchId = String(form.get('branch_id') ?? '')
     setPending(true)
     setError(null)
@@ -116,9 +128,10 @@ export function BranchesPage() {
         date: String(form.get('date') ?? ''),
         name: String(form.get('holiday_name') ?? ''),
       })
-      event.currentTarget.reset()
+      showToast('success', 'Đã thêm ngày nghỉ.')
+      formElement.reset()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -130,9 +143,10 @@ export function BranchesPage() {
     try {
       await ensureCsrfCookie()
       await api.delete(`/api/v1/branches/${branch.id}`)
+      showToast('success', 'Đã xóa chi nhánh.')
       await load()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }

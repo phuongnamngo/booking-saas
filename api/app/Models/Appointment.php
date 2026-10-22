@@ -42,6 +42,11 @@ class Appointment extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     protected function casts(): array
     {
         return [

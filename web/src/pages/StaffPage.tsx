@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
+import { useToast } from '../app/toast'
 import { listFrom } from './listFrom'
 import { readApiError } from './readApiError'
 
@@ -22,6 +23,13 @@ export function StaffPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const showToast = useToast()
+
+  function reportError(caught: unknown) {
+    const message = readApiError(caught)
+    setError(message)
+    showToast('error', message)
+  }
 
   async function load() {
     setLoading(true)
@@ -36,7 +44,7 @@ export function StaffPage() {
       setBranches(listFrom<Option>(branchResponse.data))
       setServices(listFrom<Option>(serviceResponse.data))
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setLoading(false)
     }
@@ -59,7 +67,7 @@ export function StaffPage() {
         }
       } catch (caught) {
         if (!cancelled) {
-          setError(readApiError(caught))
+          reportError(caught)
         }
       } finally {
         if (!cancelled) {
@@ -75,7 +83,8 @@ export function StaffPage() {
 
   async function saveProfile(event: FormEvent<HTMLFormElement>, staffId?: string) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     const body = {
       user_id: String(form.get('user_id') ?? ''),
       branch_ids: form.getAll('branch_ids').map(String),
@@ -87,13 +96,15 @@ export function StaffPage() {
       await ensureCsrfCookie()
       if (staffId) {
         await api.patch(`/api/v1/staff/${staffId}`, body)
+        showToast('success', 'Đã lưu hồ sơ.')
       } else {
         await api.post('/api/v1/staff', body)
-        event.currentTarget.reset()
+        showToast('success', 'Đã tạo hồ sơ.')
+        formElement.reset()
       }
       await load()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -116,8 +127,9 @@ export function StaffPage() {
           },
         ],
       })
+      showToast('success', 'Đã lưu giờ làm.')
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -125,7 +137,8 @@ export function StaffPage() {
 
   async function addException(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     const staffId = String(form.get('staff_id') ?? '')
     setPending(true)
     setError(null)
@@ -136,9 +149,10 @@ export function StaffPage() {
         starts_at: String(form.get('starts_at') ?? ''),
         ends_at: String(form.get('ends_at') ?? ''),
       })
-      event.currentTarget.reset()
+      showToast('success', 'Đã thêm ngoại lệ.')
+      formElement.reset()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }

@@ -4,6 +4,8 @@ export type SessionUser = {
   email: string
   isSuperAdmin: boolean
   emailVerifiedAt: string | null
+  role: string | null
+  permissions: string[]
 }
 
 export type MeResponse = {
@@ -12,6 +14,8 @@ export type MeResponse = {
   email: string
   is_super_admin: boolean
   email_verified_at: string | null
+  role: string | null
+  permissions: string[]
 }
 
 export function sessionFromMe(data: MeResponse): SessionUser {
@@ -21,6 +25,8 @@ export function sessionFromMe(data: MeResponse): SessionUser {
     email: data.email,
     isSuperAdmin: data.is_super_admin,
     emailVerifiedAt: data.email_verified_at,
+    role: data.role,
+    permissions: data.permissions,
   }
 }
 

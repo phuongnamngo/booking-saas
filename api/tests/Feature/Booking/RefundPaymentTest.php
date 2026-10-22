@@ -3,19 +3,24 @@
 namespace Tests\Feature\Booking;
 
 use App\Jobs\RefundPayment;
+use App\Mail\PaymentReceiptMail;
+use App\Mail\RefundReceiptMail;
 use App\Models\Appointment;
 use App\Models\Branch;
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\StaffProfile;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\InvoiceIssuer;
 use App\Services\PaymentGateway;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -49,6 +54,55 @@ class RefundPaymentTest extends TestCase
             ->assertJsonPath('0.status', 'refunded')
             ->assertJsonPath('0.refunds.0.amount', 150000)
             ->assertJsonPath('0.refunds.0.status', 'succeeded');
+    }
+
+    public function test_cancel_records_a_refund_line_and_queues_the_refund_receipt(): void
+    {
+        Mail::fake();
+        [$appointment, $payment] = $this->paidAppointment();
+        $appointment->customer()->update(['email' => 'khach@example.com']);
+        app(InvoiceIssuer::class)->issue($payment);
+
+        $this->login('owner@example.com');
+        $this->withHeader('Referer', 'http://localhost:5173')
+            ->postJson('/api/v1/appointments/'.$appointment->public_id.'/cancel')
+            ->assertOk();
+
+        $invoice = Invoice::query()->firstOrFail();
+        $this->assertSame(150000, $invoice->refunded_amount);
+        $this->assertNotNull($invoice->refunded_at);
+        Mail::assertQueued(RefundReceiptMail::class, fn (RefundReceiptMail $mail): bool => $mail->hasTo('khach@example.com'));
+        Mail::assertNotQueued(PaymentReceiptMail::class);
+    }
+
+    public function test_cancel_refunds_when_the_payment_has_no_invoice(): void
+    {
+        Mail::fake();
+        [$appointment] = $this->paidAppointment();
+
+        $this->login('owner@example.com');
+        $this->withHeader('Referer', 'http://localhost:5173')
+            ->postJson('/api/v1/appointments/'.$appointment->public_id.'/cancel')
+            ->assertOk();
+
+        $this->assertSame(0, Invoice::query()->count());
+        $this->assertSame(1, Refund::query()->count());
+        Mail::assertNotQueued(RefundReceiptMail::class);
+    }
+
+    public function test_gateway_failure_does_not_mark_the_invoice_refunded(): void
+    {
+        Mail::fake();
+        [$appointment, $payment] = $this->paidAppointment(failRefund: true);
+        app(InvoiceIssuer::class)->issue($payment);
+
+        $this->login('owner@example.com');
+        $this->withHeader('Referer', 'http://localhost:5173')
+            ->postJson('/api/v1/appointments/'.$appointment->public_id.'/cancel');
+
+        $this->assertNull(Invoice::query()->firstOrFail()->refunded_at);
+        $this->assertSame('refund_pending', $payment->refresh()->status);
+        Mail::assertNotQueued(RefundReceiptMail::class);
     }
 
     public function test_completed_cancel_and_no_show_do_not_refund(): void

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\IdempotencyReplay;
 use App\Models\Appointment;
 use App\Models\Branch;
+use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Service;
@@ -200,6 +201,38 @@ class AppointmentController extends Controller
                 'status' => $refund->status,
             ])->values(),
         ])->values();
+
+        return response()->json($rows);
+    }
+
+    public function invoices(Appointment $appointment): JsonResponse
+    {
+        $this->authorize('view', $appointment);
+
+        $rows = $appointment->invoices()->orderBy('id')->get()->map(function (Invoice $invoice): array {
+            $lines = collect($invoice->lines)->map(fn (array $line): array => [
+                'type' => 'charge',
+                'name' => $line['name'],
+                'amount' => $line['amount'],
+            ])->values();
+
+            if ($invoice->refunded_at !== null) {
+                $lines->push([
+                    'type' => 'refund',
+                    'amount' => $invoice->refunded_amount,
+                    'at' => $invoice->refunded_at->toIso8601String(),
+                ]);
+            }
+
+            return [
+                'id' => $invoice->public_id,
+                'amount' => $invoice->amount,
+                'currency' => $invoice->currency,
+                'customer_name' => $invoice->customer_name,
+                'issued_at' => $invoice->issued_at->toIso8601String(),
+                'lines' => $lines,
+            ];
+        })->values();
 
         return response()->json($rows);
     }

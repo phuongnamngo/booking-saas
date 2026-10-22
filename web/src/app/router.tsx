@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
@@ -17,6 +18,7 @@ import { RegisterPage } from '../pages/RegisterPage'
 import { ReportsPage } from '../pages/ReportsPage'
 import { ServicesPage } from '../pages/ServicesPage'
 import { StaffPage } from '../pages/StaffPage'
+import { ToastProvider } from './toast'
 import { listFrom } from '../pages/listFrom'
 
 type NotificationItem = {
@@ -134,27 +136,53 @@ function RequireSession() {
   return <AppShell />
 }
 
+function allows(permission: string): boolean {
+  return getSession().user?.permissions.includes(permission) ?? false
+}
+
+function RequirePermission({
+  permission,
+  anyOf,
+  children,
+}: {
+  permission?: string
+  anyOf?: string[]
+  children: ReactNode
+}) {
+  const allowed = permission !== undefined ? allows(permission) : (anyOf ?? []).some((item) => allows(item))
+
+  if (!allowed) {
+    return <Navigate to="/app/appointments" replace />
+  }
+
+  return children
+}
+
 function AppShell() {
+  const appointments = allows('appointments.manage') || allows('appointments.handle')
+
   return (
     <div className="desk">
       <aside className="rail">
         <p className="mark">Sổ lịch</p>
         <p className="mark-sub">Lễ tân</p>
         <nav>
-          <NavLink to="/app/branches">Chi nhánh</NavLink>
-          <NavLink to="/app/services">Dịch vụ</NavLink>
-          <NavLink to="/app/staff">Nhân viên</NavLink>
-          <NavLink to="/app/appointments">Lịch hẹn</NavLink>
-          <NavLink to="/app/reports">Báo cáo</NavLink>
+          {allows('branches.manage') ? <NavLink to="/app/branches">Chi nhánh</NavLink> : null}
+          {allows('services.manage') ? <NavLink to="/app/services">Dịch vụ</NavLink> : null}
+          {allows('staff.manage') ? <NavLink to="/app/staff">Nhân viên</NavLink> : null}
+          {appointments ? <NavLink to="/app/appointments">Lịch hẹn</NavLink> : null}
+          {allows('appointments.manage') ? <NavLink to="/app/reports">Báo cáo</NavLink> : null}
           <NavLink to="/app/profile">Hồ sơ</NavLink>
         </nav>
       </aside>
-      <div className="desk-main">
-        <header className="desk-bar">
-          <NotificationBell />
-        </header>
-        <Outlet />
-      </div>
+      <ToastProvider>
+        <div className="desk-main">
+          <header className="desk-bar">
+            <NotificationBell />
+          </header>
+          <Outlet />
+        </div>
+      </ToastProvider>
     </div>
   )
 }
@@ -174,11 +202,18 @@ export function AppRouter() {
       <Route path="/admin" element={<RequireAdmin />} />
       <Route path="/app" element={<RequireSession />}>
         <Route index element={<h1>Lịch hẹn</h1>} />
-        <Route path="branches" element={<BranchesPage />} />
-        <Route path="services" element={<ServicesPage />} />
-        <Route path="staff" element={<StaffPage />} />
-        <Route path="appointments" element={<AppointmentsPage />} />
-        <Route path="reports" element={<ReportsPage />} />
+        <Route path="branches" element={<RequirePermission permission="branches.manage"><BranchesPage /></RequirePermission>} />
+        <Route path="services" element={<RequirePermission permission="services.manage"><ServicesPage /></RequirePermission>} />
+        <Route path="staff" element={<RequirePermission permission="staff.manage"><StaffPage /></RequirePermission>} />
+        <Route
+          path="appointments"
+          element={
+            <RequirePermission anyOf={['appointments.manage', 'appointments.handle']}>
+              <AppointmentsPage />
+            </RequirePermission>
+          }
+        />
+        <Route path="reports" element={<RequirePermission permission="appointments.manage"><ReportsPage /></RequirePermission>} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
     </Routes>

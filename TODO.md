@@ -18,7 +18,7 @@ Việc được hoãn có chủ đích, ngoài change hiện tại. Các mục c
 
 ## Visual pass cho layout admin và trang đặt lịch
 
-- Kết quả: một hướng visual được chốt qua skill sketch, rồi áp lên các route đã có: login, register, `/app/*`, wizard `/t/:slug`, cùng các route mới của `complete-core-ae` (`/forgot-password`, `/reset-password`, `/verify-email`, `/app/profile`, `/admin`, `/t/:slug/appointments/:id`).
+- Kết quả: một hướng visual được chốt qua skill sketch, rồi áp lên các route đã có: login, register, `/app/*`, wizard `/t/:slug`, cùng các route mới của `complete-core-ae` (`/forgot-password`, `/reset-password`, `/verify-email`, `/app/profile`, `/admin`, `/t/:slug/appointments/:id`). Biểu đồ và toast của `receipts-dashboard-access` nằm trên các route `/app` đó, cùng hàng đợi.
 - Lý do hoãn: skill sketch không có trong workspace. `platform-booking-core` và `complete-core-ae` không chọn design system thay thế. Màn mới dùng lại form đăng nhập, khung `/app` và trang đặt lịch công khai.
 - Change gốc: `platform-booking-core`. `complete-core-ae` thêm route vào cùng hàng đợi.
 - Cách làm tiếp: mở sketch, user chọn một phương án, đóng session, rồi đổi presentation của các route đó mà không đổi hợp đồng API.

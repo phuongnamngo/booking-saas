@@ -96,6 +96,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('appointments/{appointment}', [AppointmentController::class, 'update']);
         Route::post('appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
         Route::get('appointments/{appointment}/payments', [AppointmentController::class, 'payments']);
+        Route::get('appointments/{appointment}/invoices', [AppointmentController::class, 'invoices']);
         Route::post('appointments/{appointment}/status', [AppointmentController::class, 'status']);
         Route::get('notifications', [NotificationController::class, 'index']);
         Route::post('notifications/{id}/read', [NotificationController::class, 'read']);

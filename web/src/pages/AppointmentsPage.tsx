@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
+import { useToast } from '../app/toast'
 import { listFrom } from './listFrom'
 import { readApiError } from './readApiError'
 
@@ -59,6 +60,13 @@ export function AppointmentsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const showToast = useToast()
+
+  function reportError(caught: unknown) {
+    const message = readApiError(caught)
+    setError(message)
+    showToast('error', message)
+  }
 
   async function loadAppointments(nextBranchId: string, nextDate: string, nextView: 'day' | 'week') {
     if (nextBranchId === '') {
@@ -97,7 +105,7 @@ export function AppointmentsPage() {
         await loadAppointments(nextBranchId, date, view)
       } catch (caught) {
         if (!cancelled) {
-          setError(readApiError(caught))
+          reportError(caught)
         }
       } finally {
         if (!cancelled) {
@@ -118,13 +126,14 @@ export function AppointmentsPage() {
     try {
       await loadAppointments(branchId, date, view)
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     }
   }
 
   async function createAppointment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     setPending(true)
     setError(null)
     try {
@@ -140,10 +149,11 @@ export function AppointmentsPage() {
           email: String(form.get('customer_email') ?? '') || null,
         },
       })
-      event.currentTarget.reset()
+      showToast('success', 'Đã tạo lịch.')
+      formElement.reset()
       await reload()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -161,9 +171,10 @@ export function AppointmentsPage() {
         starts_at: String(form.get('starts_at') ?? ''),
         staff_id: String(form.get('staff_id') ?? '') || undefined,
       })
+      showToast('success', 'Đã đổi giờ.')
       await reload()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -175,9 +186,10 @@ export function AppointmentsPage() {
     try {
       await ensureCsrfCookie()
       await api.post(`/api/v1/appointments/${appointment.id}/cancel`)
+      showToast('success', 'Đã hủy lịch.')
       await reload()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -192,9 +204,10 @@ export function AppointmentsPage() {
       const url = (response.data as { url?: string }).url
       if (url) {
         setCheckoutUrls((current) => ({ ...current, [appointment.id]: url }))
+        showToast('success', 'Đã tạo liên kết thanh toán.')
       }
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -206,9 +219,10 @@ export function AppointmentsPage() {
     try {
       await ensureCsrfCookie()
       await api.post(`/api/v1/appointments/${appointment.id}/status`, { status })
+      showToast('success', 'Đã đổi trạng thái.')
       await reload()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -227,7 +241,7 @@ export function AppointmentsPage() {
           onChange={(event) => {
             const next = event.target.value
             setBranchId(next)
-            void loadAppointments(next, date, view).catch((caught) => setError(readApiError(caught)))
+            void loadAppointments(next, date, view).catch((caught) => reportError(caught))
           }}
         >
           {branches.map((branch) => (

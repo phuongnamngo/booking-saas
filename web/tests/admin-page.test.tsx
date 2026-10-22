@@ -29,6 +29,8 @@ it('suspends a tenant without the branch navigation', async () => {
     email: 'root@example.com',
     isSuperAdmin: true,
     emailVerifiedAt: '2026-10-22T00:00:00+00:00',
+    role: null,
+    permissions: [],
   })
   vi.mocked(api.get).mockResolvedValue({
     data: [{ id: '01TENANT', name: 'Spa A', slug: 'spa-a', plan: 'free', suspended_at: null }],

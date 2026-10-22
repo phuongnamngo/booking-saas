@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
+import { useToast } from '../app/toast'
 import { listFrom } from './listFrom'
 import { readApiError } from './readApiError'
 
@@ -20,6 +21,13 @@ export function ServicesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const showToast = useToast()
+
+  function reportError(caught: unknown) {
+    const message = readApiError(caught)
+    setError(message)
+    showToast('error', message)
+  }
 
   async function load() {
     setLoading(true)
@@ -32,7 +40,7 @@ export function ServicesPage() {
       setCategories(listFrom<Category>(categoryResponse.data))
       setServices(listFrom<ServiceItem>(serviceResponse.data))
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setLoading(false)
     }
@@ -53,7 +61,7 @@ export function ServicesPage() {
         }
       } catch (caught) {
         if (!cancelled) {
-          setError(readApiError(caught))
+          reportError(caught)
         }
       } finally {
         if (!cancelled) {
@@ -69,16 +77,18 @@ export function ServicesPage() {
 
   async function createCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     setPending(true)
     setError(null)
     try {
       await ensureCsrfCookie()
       await api.post('/api/v1/service-categories', { name: String(form.get('name') ?? '') })
-      event.currentTarget.reset()
+      showToast('success', 'Đã tạo nhóm.')
+      formElement.reset()
       await load()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -86,7 +96,8 @@ export function ServicesPage() {
 
   async function createService(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     const categoryId = String(form.get('category_id') ?? '')
     setPending(true)
     setError(null)
@@ -99,10 +110,11 @@ export function ServicesPage() {
         category_id: categoryId === '' ? null : categoryId,
         is_active: form.get('is_active') === 'on',
       })
-      event.currentTarget.reset()
+      showToast('success', 'Đã tạo dịch vụ.')
+      formElement.reset()
       await load()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -124,9 +136,10 @@ export function ServicesPage() {
         category_id: categoryId === '' ? null : categoryId,
         is_active: form.get('is_active') === 'on',
       })
+      showToast('success', 'Đã lưu dịch vụ.')
       await load()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
@@ -138,9 +151,10 @@ export function ServicesPage() {
     try {
       await ensureCsrfCookie()
       await api.delete(`/api/v1/services/${service.id}`)
+      showToast('success', 'Đã xóa dịch vụ.')
       await load()
     } catch (caught) {
-      setError(readApiError(caught))
+      reportError(caught)
     } finally {
       setPending(false)
     }
