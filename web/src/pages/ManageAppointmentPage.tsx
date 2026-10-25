@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import { api, ensureCsrfCookie } from '../api/client'
+import { isClosed, statusLabel } from '../app/status'
 import { readApiError } from './readApiError'
 
 type AppointmentView = {
@@ -9,6 +10,32 @@ type AppointmentView = {
   status: string
   starts_at: string
   staff_id: string | null
+}
+
+function formatClock(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return iso
+  }
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+function formatDay(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
 }
 
 function readManageError(caught: unknown): string {
@@ -76,17 +103,28 @@ export function ManageAppointmentPage() {
   return (
     <main className="stage">
       <p className="mark">Sổ lịch</p>
-      <h1>Lịch hẹn</h1>
-      {error ? <p role="alert">{error}</p> : null}
-      {appointment ? (
-        <>
-          <p>{appointment.status}</p>
-          <p>{appointment.starts_at}</p>
-          <button type="button" onClick={() => void cancel()} disabled={pending || appointment.status === 'cancelled'}>
-            Hủy lịch
-          </button>
-        </>
-      ) : null}
+      <section className="stage-card">
+        <h1>Lịch hẹn</h1>
+        {error ? <p role="alert">{error}</p> : null}
+        {appointment ? (
+          <>
+            <span className={`pill pill-${appointment.status}`}>{statusLabel(appointment.status)}</span>
+            <time className="appt-time" dateTime={appointment.starts_at}>
+              {formatClock(appointment.starts_at)}
+              <small>{formatDay(appointment.starts_at)}</small>
+            </time>
+            <button
+              className="danger"
+              type="button"
+              onClick={() => void cancel()}
+              disabled={pending || isClosed(appointment.status)}
+            >
+              Hủy lịch
+            </button>
+          </>
+        ) : null}
+        {appointment === null && error === null ? <p className="mute">Đang tải</p> : null}
+      </section>
     </main>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
 import { listFrom } from './listFrom'
 
@@ -63,37 +63,51 @@ export function AdminPage() {
         <p className="mark-sub">Quản trị</p>
       </aside>
       <div className="desk-main">
-        <h1>Tenant</h1>
-        <ul>
-          {rows.map((row) => (
-            <li key={row.id}>
-              <p>
-                <span>{row.name}</span>
-                <span> · {row.slug} · {row.plan}</span>
-                {row.suspended_at ? <span> · đang khóa</span> : null}
-              </p>
-              <label>
-                Gói
-                <select
-                  value={row.plan}
-                  onChange={(event) => void changePlan(row.id, event.target.value)}
-                >
-                  <option value="free">free</option>
-                  <option value="pro">pro</option>
-                </select>
-              </label>
-              {row.suspended_at ? (
-                <button type="button" onClick={() => void unsuspend(row.id)}>
-                  Mở khóa
-                </button>
-              ) : (
-                <button type="button" onClick={() => void suspend(row.id)}>
-                  Khóa
-                </button>
-              )}
+        <div className="desk-bar" />
+        <div className="page">
+        <div className="page-head">
+          <div>
+            <h1>Tenant</h1>
+            <p className="mute">Gói dịch vụ và trạng thái của từng cơ sở</p>
+          </div>
+        </div>
+        {rows.length === 0 ? <p className="empty">Chưa có tenant</p> : null}
+        <ul className="rows">
+          {rows.map((row, index) => (
+            <li key={row.id} style={{ '--i': index } as CSSProperties}>
+              <div>
+                <p className="row-title">{row.name}</p>
+                <p className="row-meta">
+                  <span>{row.slug}</span>
+                  {row.suspended_at ? <span className="pill pill-cancelled">Đang khóa</span> : null}
+                </p>
+              </div>
+              <div className="row-actions">
+                <label>
+                  <span className="sr-only">Gói</span>
+                  <select
+                    aria-label="Gói"
+                    value={row.plan}
+                    onChange={(event) => void changePlan(row.id, event.target.value)}
+                  >
+                    <option value="free">free</option>
+                    <option value="pro">pro</option>
+                  </select>
+                </label>
+                {row.suspended_at ? (
+                  <button type="button" onClick={() => void unsuspend(row.id)}>
+                    Mở khóa
+                  </button>
+                ) : (
+                  <button className="danger" type="button" onClick={() => void suspend(row.id)}>
+                    Khóa
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
+        </div>
       </div>
     </div>
   )

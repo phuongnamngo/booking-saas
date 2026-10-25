@@ -1,5 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
+import { Sheet } from '../app/sheet'
+import { isClosed, statusAction, statusLabel } from '../app/status'
 import { useToast } from '../app/toast'
 import { listFrom } from './listFrom'
 import { readApiError } from './readApiError'
@@ -39,6 +41,25 @@ function clock(iso: string): string {
   }).format(date)
 }
 
+function dayLabel(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return iso
+  }
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+  }).format(date)
+}
+
+function minutesBetween(startIso: string, endIso: string): number {
+  return Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000))
+}
+
+type SheetState = { kind: 'create' } | { kind: 'reschedule'; appointmentId: string }
+
 function addDays(isoDate: string, days: number): string {
   const [year, month, day] = isoDate.split('-').map(Number)
   const date = new Date(year, month - 1, day)
@@ -60,6 +81,8 @@ export function AppointmentsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [sheet, setSheet] = useState<SheetState | null>(null)
+  const closeSheet = useCallback(() => setSheet(null), [])
   const showToast = useToast()
 
   function reportError(caught: unknown) {
@@ -151,6 +174,7 @@ export function AppointmentsPage() {
       })
       showToast('success', 'Đã tạo lịch.')
       formElement.reset()
+      setSheet(null)
       await reload()
     } catch (caught) {
       reportError(caught)
@@ -172,6 +196,7 @@ export function AppointmentsPage() {
         staff_id: String(form.get('staff_id') ?? '') || undefined,
       })
       showToast('success', 'Đã đổi giờ.')
+      setSheet(null)
       await reload()
     } catch (caught) {
       reportError(caught)
@@ -228,87 +253,35 @@ export function AppointmentsPage() {
     }
   }
 
+  const staffName = (id?: string) => staff.find((profile) => profile.id === id)?.name
+  const editingId = sheet?.kind === 'reschedule' ? sheet.appointmentId : null
+  const editing = appointments.find((appointment) => appointment.id === editingId)
+
   return (
     <section>
-      <h1>Lịch hẹn</h1>
+      <div className="page-head">
+        <div>
+          <h1>Lịch hẹn</h1>
+          <p className="mute">{appointments.length > 0 ? `${appointments.length} lịch trong ${view === 'day' ? 'ngày' : 'tuần'}` : 'Bảng đón khách tại quầy'}</p>
+        </div>
+        <div className="actions">
+          <button className="primary" type="button" disabled={branches.length === 0} onClick={() => setSheet({ kind: 'create' })}>
+            Tạo lịch
+          </button>
+        </div>
+      </div>
       {error ? <p role="alert">{error}</p> : null}
-      {loading ? <p>Đang tải</p> : null}
       <div className="toolbar">
-      <label>
-        Chi nhánh
-        <select
-          value={branchId}
-          onChange={(event) => {
-            const next = event.target.value
-            setBranchId(next)
-            void loadAppointments(next, date, view).catch((caught) => reportError(caught))
-          }}
-        >
-          {branches.map((branch) => (
-            <option key={branch.id} value={branch.id}>
-              {branch.name ?? branch.id}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Ngày
-        <input
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
-      </label>
-      <div className="segment">
-        <button type="button" aria-pressed={view === 'day'} onClick={() => setView('day')}>
-          Ngày
-        </button>
-        <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>
-          Tuần
-        </button>
-      </div>
-      </div>
-      {!loading && appointments.length === 0 ? <p>Chưa có lịch hẹn</p> : null}
-      <ul className="appt-list">
-        {appointments.map((appointment) => (
-          <li className="appt" key={appointment.id}>
-            <time className="appt-time" dateTime={appointment.starts_at}>
-              {clock(appointment.starts_at)}
-            </time>
-            <div>
-              <span>{appointment.status}</span>
-              <p className="mute">{appointment.starts_at}</p>
-            </div>
-            <div className="appt-actions">
-            <button className="danger" type="button" disabled={pending} onClick={() => void cancel(appointment)}>
-              Hủy
-            </button>
-            <button className="primary" type="button" disabled={pending} onClick={() => void pay(appointment)}>
-              Thanh toán
-            </button>
-            {checkoutUrls[appointment.id] ? (
-              <a href={checkoutUrls[appointment.id]}>Thanh toán</a>
-            ) : null}
-            {(nextStatus[appointment.status] ?? []).map((status) => (
-              <button
-                key={status}
-                type="button"
-                disabled={pending}
-                onClick={() => void changeStatus(appointment, status)}
-              >
-                {status}
-              </button>
-            ))}
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      <form onSubmit={(event) => void createAppointment(event)}>
-        <h2>Tạo lịch</h2>
         <label>
           Chi nhánh
-          <select name="branch_id" defaultValue={branchId}>
+          <select
+            value={branchId}
+            onChange={(event) => {
+              const next = event.target.value
+              setBranchId(next)
+              void loadAppointments(next, date, view).catch((caught) => reportError(caught))
+            }}
+          >
             {branches.map((branch) => (
               <option key={branch.id} value={branch.id}>
                 {branch.name ?? branch.id}
@@ -317,76 +290,173 @@ export function AppointmentsPage() {
           </select>
         </label>
         <label>
-          Nhân viên
-          <select name="staff_id" defaultValue={staff[0]?.id}>
-            {staff.map((profile) => (
-              <option key={profile.id} value={profile.id}>
-                {profile.name ?? profile.id}
-              </option>
-            ))}
-          </select>
+          Ngày
+          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
         </label>
-        <fieldset>
-          <legend>Dịch vụ</legend>
-          {services.map((service) => (
-            <label key={service.id}>
-              <input type="checkbox" name="service_ids" value={service.id} />
-              {service.name ?? service.id}
-            </label>
-          ))}
-        </fieldset>
-        <label>
-          Giờ bắt đầu
-          <input name="starts_at" type="datetime-local" required />
-        </label>
-        <label>
-          Tên khách
-          <input name="customer_name" required />
-        </label>
-        <label>
-          Số điện thoại
-          <input name="customer_phone" required />
-        </label>
-        <label>
-          Email
-          <input name="customer_email" type="email" />
-        </label>
-        <button type="submit" disabled={pending}>
-          {pending ? 'Đang lưu...' : 'Tạo lịch'}
-        </button>
-      </form>
-
-      {appointments.length > 0 ? (
-        <form onSubmit={(event) => void reschedule(event)}>
-          <h2>Đổi giờ</h2>
-          <label>
-            Lịch
-            <select name="appointment_id" defaultValue={appointments[0]?.id}>
-              {appointments.map((appointment) => (
-                <option key={appointment.id} value={appointment.id}>
-                  {appointment.starts_at}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Nhân viên
-            <select name="staff_id" defaultValue={staff[0]?.id}>
-              {staff.map((profile) => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.name ?? profile.id}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Giờ mới
-            <input name="starts_at" type="datetime-local" required />
-          </label>
-          <button type="submit" disabled={pending}>
-            Đổi giờ
+        <span className="grow" />
+        <div className="segment">
+          <button type="button" aria-pressed={view === 'day'} onClick={() => setView('day')}>
+            Ngày
           </button>
-        </form>
+          <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>
+            Tuần
+          </button>
+        </div>
+      </div>
+      {loading ? (
+        <div className="skeleton" aria-busy="true">
+          <span className="sr-only">Đang tải</span>
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : null}
+      {!loading && appointments.length === 0 ? <p className="empty">Chưa có lịch hẹn</p> : null}
+      {appointments.length > 0 ? (
+        <ul className="appt-list">
+          {appointments.map((appointment, index) => {
+            const closed = isClosed(appointment.status)
+            const name = staffName(appointment.staff_id)
+            return (
+              <li
+                className={closed ? 'appt is-closed' : 'appt'}
+                key={appointment.id}
+                style={{ '--i': index } as CSSProperties}
+              >
+                <time className="appt-time" dateTime={appointment.starts_at}>
+                  {clock(appointment.starts_at)}
+                  <small>{minutesBetween(appointment.starts_at, appointment.ends_at)} phút</small>
+                </time>
+                <div className="appt-body">
+                  <span className={`pill pill-${appointment.status}`}>{statusLabel(appointment.status)}</span>
+                  <p className="row-meta">
+                    {view === 'week' ? <span>{dayLabel(appointment.starts_at)}</span> : null}
+                    <span>
+                      {clock(appointment.starts_at)} – {clock(appointment.ends_at)}
+                    </span>
+                    {name ? <span>· {name}</span> : null}
+                  </p>
+                </div>
+                <div className="appt-actions">
+                  {closed ? null : (
+                    <>
+                      <button className="danger" type="button" disabled={pending} onClick={() => void cancel(appointment)}>
+                        Hủy
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setSheet({ kind: 'reschedule', appointmentId: appointment.id })}
+                      >
+                        Đổi giờ
+                      </button>
+                      <button type="button" disabled={pending} onClick={() => void pay(appointment)}>
+                        Thanh toán
+                      </button>
+                    </>
+                  )}
+                  {checkoutUrls[appointment.id] ? <a href={checkoutUrls[appointment.id]}>Thanh toán</a> : null}
+                  {(nextStatus[appointment.status] ?? [])
+                    .filter((status) => status !== 'cancelled')
+                    .map((status) => (
+                      <button
+                        key={status}
+                        className={status === 'no_show' ? undefined : 'primary'}
+                        type="button"
+                        disabled={pending}
+                        onClick={() => void changeStatus(appointment, status)}
+                      >
+                        {statusAction(status)}
+                      </button>
+                    ))}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
+
+      {sheet?.kind === 'create' ? (
+        <Sheet title="Tạo lịch" onClose={closeSheet}>
+          <form onSubmit={(event) => void createAppointment(event)}>
+            <label>
+              Chi nhánh
+              <select name="branch_id" defaultValue={branchId}>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name ?? branch.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Nhân viên
+              <select name="staff_id" defaultValue={staff[0]?.id}>
+                {staff.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name ?? profile.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <fieldset>
+              <legend>Dịch vụ</legend>
+              {services.map((service) => (
+                <label key={service.id}>
+                  <input type="checkbox" name="service_ids" value={service.id} />
+                  {service.name ?? service.id}
+                </label>
+              ))}
+            </fieldset>
+            <label>
+              Giờ bắt đầu
+              <input name="starts_at" type="datetime-local" required />
+            </label>
+            <label>
+              Tên khách
+              <input name="customer_name" required />
+            </label>
+            <label>
+              Số điện thoại
+              <input name="customer_phone" required />
+            </label>
+            <label>
+              Email
+              <input name="customer_email" type="email" />
+            </label>
+            <button type="submit" disabled={pending}>
+              {pending ? 'Đang lưu...' : 'Tạo lịch'}
+            </button>
+          </form>
+        </Sheet>
+      ) : null}
+
+      {sheet?.kind === 'reschedule' && editing ? (
+        <Sheet title="Đổi giờ" onClose={closeSheet}>
+          <form onSubmit={(event) => void reschedule(event)}>
+            <input type="hidden" name="appointment_id" value={editing.id} />
+            <p className="mute">
+              Lịch hiện tại {clock(editing.starts_at)} · {dayLabel(editing.starts_at)}
+            </p>
+            <label>
+              Nhân viên
+              <select name="staff_id" defaultValue={editing.staff_id ?? staff[0]?.id}>
+                {staff.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name ?? profile.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Giờ mới
+              <input name="starts_at" type="datetime-local" required />
+            </label>
+            <button type="submit" disabled={pending}>
+              {pending ? 'Đang lưu...' : 'Đổi giờ'}
+            </button>
+          </form>
+        </Sheet>
       ) : null}
     </section>
   )

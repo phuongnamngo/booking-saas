@@ -1,28 +1,48 @@
-# Design System: Sổ lịch spa
-**Project ID:** 12809359952938126879
+# Design System: Sổ lịch Desk
+**Project ID:** 15047864017730781680
+**Design system asset:** assets/11799409904409379582 (version 2, FIDELITY, Be Vietnam Pro, ROUND_EIGHT)
 
 ## 1. Visual Theme & Atmosphere
-A Vietnamese spa and salon reception desk, not a marketing landing page. The room is quiet mineral paper with deep pine ink. Density is comfortable for a front desk: enough air to scan a day of appointments, tight enough that a manager sees the next guest without scrolling past decoration. One thing carries the visual weight: the appointment time, set large and calm. Everything else stays secondary. No gradient mesh, no all-caps eyebrows, no identical card grid, no cream-and-terracotta palette.
+A Vietnamese reception desk for salons and clinics. Calm, modern, paper-and-ink. Not a generic SaaS dashboard. One thing carries the visual weight on each screen: the appointment time on the desk, the big figure on reports, the chosen slot in the booking wizard. No gradient mesh, no all-caps eyebrows, no icon rainbow.
 
 ## 2. Color Palette & Roles
-- **Mineral paper** (#F4F7F6): page background. A cool, slightly green paper so the desk does not read as warm cream.
-- **Card white** (#FBFCFB): panels, forms, and the booking sheet.
-- **Pine ink** (#1A2E2A): headings, guest names, and the large appointment time.
-- **Moss mute** (#5E6F6A): helper text, step labels, and table meta.
-- **Verdigris stamp** (#0F6E56): the single action color. Primary buttons and the selected time chip only.
-- **Stamp wash** (#E7F3EE): selected row, selected step, and the success strip after a booking.
-- **Hairline** (#D7E0DC): borders and dividers. One pixel, never a heavy frame.
-- **Cancel brick** (#8E3B3B): destructive text and the cancel action only. Never a brand color.
+| Token | Hex | Role |
+|---|---|---|
+| `--paper` Paper Mist | #F4F7F6 | Page background |
+| `--card` Warm Card | #FBFCFB | Panels, forms, sheets |
+| `--ink` Ink | #1A2E2A | Headings, times, figures |
+| `--mute` Moss Mute | #5E6F6A | Helper text, meta, step labels |
+| `--stamp` Stamp Green | #0F6E56 | Primary buttons, current nav, links, chart bars |
+| `--wash` Pale Mint | #E7F3EE | Selected rows, active step pill, current rail item, success toast |
+| `--line` Leaf Line | #D7E0DC | 1px hairlines |
+| `--brick` Brick | #8E3B3B | Destructive text buttons and error text only |
+
+Status pills: pending uses amber, confirmed uses stamp on wash, in progress uses sky, cancelled and no-show use brick on brick wash, completed uses mute.
 
 ## 3. Typography Rules
-Be Vietnam Pro for both headlines and body so Vietnamese diacritics stay intact. Headlines are semibold (600) with tight tracking (-0.02em) and a line height near 1.2. Body is regular (400) at 16px with a line height of 1.5. The appointment time uses the same family at 32px semibold, pine ink, no letter-spacing tricks. Labels are sentence case. Do not set navigation or field labels in all capitals.
+Be Vietnam Pro everywhere so Vietnamese diacritics stay intact. Headlines weight 600, letter-spacing -0.02em. Page title 28px, section 18px, body 16px, label 14px weight 500. Appointment times 32px and metrics 40px with tabular numbers. Sentence case labels.
 
 ## 4. Component Stylings
-* **Buttons:** Subtly rounded corners (8px). Primary is verdigris stamp with card-white text. Secondary is card white with a hairline and pine ink text. The cancel action is text-only in cancel brick. One primary button per view.
-* **Cards/Containers:** The booking sheet and the day list use card white, a hairline, and a whisper-soft shadow (0 8px 24px rgba(26, 46, 42, 0.06)). Corners are gently rounded (16px) on the booking sheet only. Tables and lists stay flatter, with 8px corners, so the sheet is the one elevated object.
-* **Inputs/Forms:** Hairline stroke, card-white fill, 8px corners, 44px height. Focus ring is a 2px verdigris stamp outline with 2px offset. Placeholder is moss mute.
-* **Time chips:** Quiet chips with a hairline. The chosen chip fills with stamp wash and a verdigris stamp border. The time itself is the label, not an icon.
-* **Navigation:** A slim left rail on desktop, pine ink on mineral paper, the current item marked with a stamp wash. No icon rainbow. Mobile public booking has no rail: a short step line above the sheet.
+* **Buttons:** 8px radius, 44px min height. Primary is stamp green with white text; secondary is card with a hairline; destructive is text-only brick. One primary per view. Press scales to 0.98.
+* **Cards:** 16px radius, 1px Leaf Line border, shadow `0 8px 24px rgba(26,46,42,0.06)`.
+* **Inputs:** hairline, card fill, 8px radius, 44px height, 2px stamp focus ring with 2px offset.
+* **Pills:** fully rounded, dot plus label.
+* **Side sheet:** right-anchored dialog for create and reschedule on the appointments page, scrim behind, Escape closes.
+* **Toast:** drops in under the top bar; error variant in brick.
 
 ## 5. Layout Principles
-Left-aligned, 8px spacing rhythm. Desktop admin is a rail (220px) plus a main column with a 32px page inset. The public booking page is one column on a phone (16px inset) and, on a wide screen, the step sheet on the left with the chosen-time card pinned on the right. Do not center a marketing hero. Do not wrap every field in its own card. Group fields inside one sheet. Status words (Chờ xác nhận, Đã xác nhận, Đã hủy) sit inline beside the guest name, colored with moss mute unless the row is cancelled, which uses cancel brick.
+* Signed-in desk: fixed 220px left rail with the "Sổ lịch" wordmark and role subtitle, a top bar with the notification bell, and a content column.
+* Public and auth screens: centered single card on paper, max 28rem; the booking wizard is 32rem.
+* Under 800px the rail becomes a horizontal wrapping nav.
+* 8px spacing rhythm.
+
+## 6. Motion
+* The shell never moves on navigation. Only the page content enters: 12px rise plus fade, 280ms ease-out (`--ease-out: cubic-bezier(0.22, 1, 0.36, 1)`).
+* Lists stagger 40ms per item through the `--i` custom property.
+* Loading uses a skeleton shimmer.
+* Wizard steps slide 40px horizontally with a cross-fade, direction-aware; the success state settles in with a drawn check mark.
+* Side sheet slides in over 320ms.
+* `prefers-reduced-motion: reduce` falls back to fade only.
+
+## 7. Screens
+Stitch exports live in `.stitch/designs/` (HTML and PNG per screen); see `metadata.json` for screen IDs. Implementation lives in `web/src/index.css` (tokens, base controls, keyframes) and `web/src/App.css` (layout and components).

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Bar, BarChart, XAxis, YAxis } from 'recharts'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { api, ensureCsrfCookie } from '../api/client'
 import { useToast } from '../app/toast'
 import { readApiError } from './readApiError'
@@ -86,50 +86,74 @@ export function ReportsPage() {
     }
   }
 
+  const money = new Intl.NumberFormat('vi-VN')
+  const compact = new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 })
+  const percent = (rate: number) => `${Math.round(rate * 1000) / 10}`
+  const charts: { title: string; data: object[]; x: string; y: string }[] = [
+    { title: 'Doanh thu theo kỳ', data: byPeriod, x: 'period', y: 'revenue' },
+    { title: 'Doanh thu theo dịch vụ', data: byService, x: 'name', y: 'revenue' },
+    { title: 'Doanh thu theo nhân viên', data: byStaff, x: 'name', y: 'revenue' },
+    { title: 'Khung giờ đông', data: peakHours, x: 'hour', y: 'count' },
+  ]
+
   return (
     <section className="screen">
-      <h1>Báo cáo</h1>
+      <div className="page-head">
+        <div>
+          <h1>Báo cáo</h1>
+          <p className="mute">Doanh thu, tỷ lệ hủy và khung giờ đông của quầy</p>
+        </div>
+        <div className="actions">
+          <label>
+            Nhóm
+            <select value={group} onChange={(event) => setGroup(event.target.value as 'day' | 'week' | 'month')}>
+              <option value="day">Ngày</option>
+              <option value="week">Tuần</option>
+              <option value="month">Tháng</option>
+            </select>
+          </label>
+          <button className="primary" type="button" onClick={() => void exportCsv()}>
+            Xuất CSV
+          </button>
+        </div>
+      </div>
       {error ? <p role="alert">{error}</p> : null}
-      <label>
-        Nhóm
-        <select value={group} onChange={(event) => setGroup(event.target.value as 'day' | 'week' | 'month')}>
-          <option value="day">Ngày</option>
-          <option value="week">Tuần</option>
-          <option value="month">Tháng</option>
-        </select>
-      </label>
-      {revenue !== null ? (
-        <p className="figure">
+      <div className="figures">
+        <p className="figure" style={{ '--i': 0 } as CSSProperties}>
           <span>Doanh thu</span>
-          <strong>{revenue}</strong>
-          <span>đ</span>
+          <strong>
+            {revenue !== null ? money.format(revenue) : '—'}
+            <small>đ</small>
+          </strong>
         </p>
-      ) : null}
-      {cancelRate !== null ? <p>Hủy {cancelRate}</p> : null}
-      {noShowRate !== null ? <p>Vắng {noShowRate}</p> : null}
-      <BarChart width={480} height={200} data={byPeriod}>
-        <XAxis dataKey="period" />
-        <YAxis />
-        <Bar dataKey="revenue" />
-      </BarChart>
-      <BarChart width={480} height={200} data={byService}>
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Bar dataKey="revenue" />
-      </BarChart>
-      <BarChart width={480} height={200} data={byStaff}>
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Bar dataKey="revenue" />
-      </BarChart>
-      <BarChart width={480} height={200} data={peakHours}>
-        <XAxis dataKey="hour" />
-        <YAxis />
-        <Bar dataKey="count" />
-      </BarChart>
-      <button className="primary" type="button" onClick={() => void exportCsv()}>
-        Xuất CSV
-      </button>
+        <p className="figure" style={{ '--i': 1 } as CSSProperties}>
+          <span>Tỷ lệ hủy</span>
+          <strong>
+            {cancelRate !== null ? percent(cancelRate) : '—'}
+            <small>%</small>
+          </strong>
+        </p>
+        <p className="figure" style={{ '--i': 2 } as CSSProperties}>
+          <span>Tỷ lệ vắng</span>
+          <strong>
+            {noShowRate !== null ? percent(noShowRate) : '—'}
+            <small>%</small>
+          </strong>
+        </p>
+      </div>
+      <div className="charts">
+        {charts.map((chart, index) => (
+          <figure className="chart" key={chart.title} style={{ '--i': index } as CSSProperties}>
+            <h2>{chart.title}</h2>
+            <BarChart width={420} height={220} data={chart.data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <CartesianGrid vertical={false} stroke="#e3e9e6" />
+              <XAxis dataKey={chart.x} tickLine={false} axisLine={{ stroke: '#d7e0dc' }} tick={{ fill: '#5e6f6a', fontSize: 12 }} />
+              <YAxis tickLine={false} axisLine={false} tick={{ fill: '#5e6f6a', fontSize: 12 }} tickFormatter={(value: number) => compact.format(value)} width={56} />
+              <Bar dataKey={chart.y} fill="#0f6e56" radius={[6, 6, 0, 0]} maxBarSize={40} animationDuration={400} />
+            </BarChart>
+          </figure>
+        ))}
+      </div>
     </section>
   )
 }

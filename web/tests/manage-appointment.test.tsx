@@ -39,7 +39,7 @@ it('cancels a public appointment with the token on the query', async () => {
     </MemoryRouter>,
   )
 
-  expect(await screen.findByText('pending')).toBeInTheDocument()
+  expect(await screen.findByText('Chờ xác nhận')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Hủy lịch' }))
 
   await waitFor(() => {

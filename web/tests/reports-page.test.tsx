@@ -38,7 +38,7 @@ it('shows revenue and posts a csv export', async () => {
     </MemoryRouter>,
   )
 
-  expect(await screen.findByText('100000')).toBeInTheDocument()
+  expect(await screen.findByText('100.000')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Xuất CSV' }))
   await waitFor(() => {
     expect(api.post).toHaveBeenCalledWith(

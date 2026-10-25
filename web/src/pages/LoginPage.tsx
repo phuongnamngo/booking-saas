@@ -54,10 +54,8 @@ export function LoginPage() {
         <button type="submit" disabled={pending}>
           {pending ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
-        <p>
+        <p className="form-links">
           <Link to="/forgot-password">Quên mật khẩu</Link>
-        </p>
-        <p>
           <Link to="/register">Đăng ký</Link>
         </p>
       </form>

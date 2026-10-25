@@ -40,7 +40,7 @@ it('shows a pending appointment', async () => {
     </MemoryRouter>,
   )
 
-  expect(await screen.findByText('pending')).toBeInTheDocument()
+  expect(await screen.findByText('Chờ xác nhận')).toBeInTheDocument()
 })
 
 it('requests a week range when Tuần is clicked', async () => {
@@ -63,7 +63,7 @@ it('requests a week range when Tuần is clicked', async () => {
     </MemoryRouter>,
   )
 
-  expect(await screen.findByText('pending')).toBeInTheDocument()
+  expect(await screen.findByText('Chờ xác nhận')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Tuần' }))
 
   await waitFor(() => {

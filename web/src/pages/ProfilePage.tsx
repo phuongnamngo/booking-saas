@@ -54,8 +54,14 @@ export function ProfilePage() {
 
   return (
     <section>
-      <h1>Hồ sơ</h1>
+      <div className="page-head">
+        <div>
+          <h1>Hồ sơ</h1>
+          <p className="mute">{user?.email}</p>
+        </div>
+      </div>
       {error ? <p role="alert">{error}</p> : null}
+      <div className="forms">
       <form onSubmit={(event) => void saveName(event)}>
         <h2>Tên</h2>
         {nameMessage ? <p>{nameMessage}</p> : null}
@@ -82,6 +88,7 @@ export function ProfilePage() {
         </label>
         <button type="submit">Đổi mật khẩu</button>
       </form>
+      </div>
     </section>
   )
 }

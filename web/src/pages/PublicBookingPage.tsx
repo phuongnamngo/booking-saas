@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { useParams } from 'react-router-dom'
 import { api, ensureCsrfCookie } from '../api/client'
 import { listFrom } from './listFrom'
@@ -17,6 +17,14 @@ function formatWhen(iso: string): string {
     weekday: 'short',
     day: '2-digit',
     month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
+function formatClock(iso: string): string {
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(iso))
@@ -42,6 +50,12 @@ export function PublicBookingPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward')
+
+  function goTo(next: number) {
+    setDirection(next >= step ? 'forward' : 'back')
+    setStep(next)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -75,7 +89,7 @@ export function PublicBookingPage() {
     try {
       const response = await api.get(`/api/v1/public/${slug}/services`)
       setServices(listFrom<ServiceItem>(response.data))
-      setStep(1)
+      goTo(1)
     } catch (caught) {
       setError(readApiError(caught))
     } finally {
@@ -91,7 +105,7 @@ export function PublicBookingPage() {
         params: { branch_id: branchId, service_ids: serviceIds },
       })
       setStaff(listFrom<StaffItem>(response.data))
-      setStep(2)
+      goTo(2)
     } catch (caught) {
       setError(readApiError(caught))
     } finally {
@@ -178,19 +192,44 @@ export function PublicBookingPage() {
   const chosenServices = services.filter((item) => serviceIds.includes(item.id))
   const chosenStaff = staff.find((item) => item.id === staffId)
 
+  const sheetClass = `sheet go-${direction}`
+  const price = new Intl.NumberFormat('vi-VN')
+
   return (
     <main className="stage wizard">
       <p className="mark">Sổ lịch</p>
       <h1>Đặt lịch</h1>
       {bookingId ? (
-        <section className="sheet">
-          <p>Đã đặt lịch.</p>
-          <p>
-            Mã lịch <strong>{bookingId}</strong>
-          </p>
-          <p>
-            Giờ đã chọn <time dateTime={startsAt}>{formatWhen(startsAt)}</time>
-          </p>
+        <section className="sheet is-done">
+          <span className="check" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+              <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <h2>Đã đặt lịch.</h2>
+          <dl className="summary">
+            <div style={{ '--i': 0 } as CSSProperties}>
+              <dt>Mã lịch</dt>
+              <dd>
+                <strong className="code">{bookingId}</strong>
+              </dd>
+            </div>
+            <div style={{ '--i': 1 } as CSSProperties}>
+              <dt>Chi nhánh</dt>
+              <dd>{branch?.name}</dd>
+            </div>
+            <div style={{ '--i': 2 } as CSSProperties}>
+              <dt>Dịch vụ</dt>
+              <dd>{chosenServices.map((item) => item.name).join(', ')}</dd>
+            </div>
+            <div style={{ '--i': 3 } as CSSProperties}>
+              <dt>Giờ đã chọn</dt>
+              <dd>
+                <time dateTime={startsAt}>{formatWhen(startsAt)}</time>
+              </dd>
+            </div>
+          </dl>
+          {error ? <p role="alert">{error}</p> : null}
           <button className="primary" type="button" disabled={pending} onClick={() => void pay()}>
             Thanh toán
           </button>
@@ -200,18 +239,22 @@ export function PublicBookingPage() {
         <>
           <ol className="steps">
             {steps.map((label, index) => (
-              <li key={label} aria-current={index === step ? 'step' : undefined}>
+              <li
+                key={label}
+                className={index < step ? 'is-done' : undefined}
+                aria-current={index === step ? 'step' : undefined}
+              >
                 {label}
               </li>
             ))}
           </ol>
           {error ? <p role="alert">{error}</p> : null}
-          {loading ? <p>Đang tải</p> : null}
 
           {step === 0 ? (
-            <section className="sheet">
+            <section className={sheetClass} key="branch">
               <h2>Chọn chi nhánh</h2>
-              {!loading && error === null && branches.length === 0 ? <p>Chưa có chi nhánh</p> : null}
+              {loading ? <p className="mute">Đang tải</p> : null}
+              {!loading && error === null && branches.length === 0 ? <p className="mute">Chưa có chi nhánh</p> : null}
               {branches.map((item) => (
                 <label key={item.id}>
                   <input
@@ -223,14 +266,14 @@ export function PublicBookingPage() {
                   {item.name}
                 </label>
               ))}
-              <button className="primary" type="button" disabled={branchId === ''} onClick={() => void loadServices()}>
+              <button className="primary" type="button" disabled={branchId === '' || loading} onClick={() => void loadServices()}>
                 Tiếp
               </button>
             </section>
           ) : null}
 
           {step === 1 ? (
-            <section className="sheet">
+            <section className={sheetClass} key="services">
               <h2>Chọn dịch vụ</h2>
               {services.map((item) => (
                 <label key={item.id}>
@@ -239,22 +282,27 @@ export function PublicBookingPage() {
                     checked={serviceIds.includes(item.id)}
                     onChange={() => toggleService(item.id)}
                   />
-                  {item.name} · {item.duration_minutes} phút · {item.price_amount} VND
+                  <span className="grow">{item.name}</span>
+                  <span className="mute">
+                    {item.duration_minutes} phút · {price.format(item.price_amount)} VND
+                  </span>
                 </label>
               ))}
-              <button type="button" onClick={() => setStep(0)}>
-                Quay lại
-              </button>
-              <button className="primary" type="button" disabled={serviceIds.length === 0} onClick={() => void loadStaff()}>
-                Tiếp
-              </button>
+              <div className="sheet-actions">
+                <button type="button" onClick={() => goTo(0)}>
+                  Quay lại
+                </button>
+                <button className="primary" type="button" disabled={serviceIds.length === 0 || loading} onClick={() => void loadStaff()}>
+                  Tiếp
+                </button>
+              </div>
             </section>
           ) : null}
 
           {step === 2 ? (
-            <section className="sheet">
+            <section className={sheetClass} key="staff">
               <h2>Chọn nhân viên</h2>
-              {!loading && staff.length === 0 ? <p>Chưa có nhân viên</p> : null}
+              {!loading && staff.length === 0 ? <p className="mute">Chưa có nhân viên</p> : null}
               {staff.map((item) => (
                 <label key={item.id}>
                   <input
@@ -266,45 +314,54 @@ export function PublicBookingPage() {
                   {item.name}
                 </label>
               ))}
-              <button type="button" onClick={() => setStep(1)}>
-                Quay lại
-              </button>
-              <button className="primary" type="button" disabled={staffId === ''} onClick={() => setStep(3)}>
-                Tiếp
-              </button>
+              <div className="sheet-actions">
+                <button type="button" onClick={() => goTo(1)}>
+                  Quay lại
+                </button>
+                <button className="primary" type="button" disabled={staffId === ''} onClick={() => goTo(3)}>
+                  Tiếp
+                </button>
+              </div>
             </section>
           ) : null}
 
           {step === 3 ? (
-            <section className="sheet">
+            <section className={sheetClass} key="time">
               <h2>Chọn ngày và giờ</h2>
               <label>
                 Ngày
                 <input type="date" value={date} onChange={(event) => void loadSlots(event.target.value)} />
               </label>
-              {!loading && date !== '' && slots.length === 0 ? <p>Không còn khung giờ</p> : null}
-              {slots.map((slot) => (
-                <label key={slot.starts_at}>
-                  <input
-                    type="radio"
-                    name="slot"
-                    checked={startsAt === slot.starts_at}
-                    onChange={() => setStartsAt(slot.starts_at)}
-                  />
-                  {formatWhen(slot.starts_at)}
-                </label>
-              ))}
-              <button type="button" onClick={() => setStep(2)}>
-                Quay lại
-              </button>
-              <button className="primary" type="button" disabled={startsAt === ''} onClick={() => setStep(4)}>
-                Tiếp
-              </button>
+              {loading && date !== '' ? <p className="mute">Đang tìm khung giờ</p> : null}
+              {!loading && date !== '' && slots.length === 0 ? <p className="mute">Không còn khung giờ</p> : null}
+              {slots.length > 0 ? (
+                <div className="chips" key={date}>
+                  {slots.map((slot, index) => (
+                    <label key={slot.starts_at} style={{ '--i': index } as CSSProperties}>
+                      <input
+                        type="radio"
+                        name="slot"
+                        checked={startsAt === slot.starts_at}
+                        onChange={() => setStartsAt(slot.starts_at)}
+                      />
+                      {formatClock(slot.starts_at)}
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+              <div className="sheet-actions">
+                <button type="button" onClick={() => goTo(2)}>
+                  Quay lại
+                </button>
+                <button className="primary" type="button" disabled={startsAt === ''} onClick={() => goTo(4)}>
+                  Tiếp
+                </button>
+              </div>
             </section>
           ) : null}
 
           {step === 4 ? (
-            <section className="sheet">
+            <section className={sheetClass} key="guest">
               <h2>Thông tin khách</h2>
               <label>
                 Tên
@@ -312,44 +369,65 @@ export function PublicBookingPage() {
               </label>
               <label>
                 Số điện thoại
-                <input value={phone} onChange={(event) => setPhone(event.target.value)} required />
+                <input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required />
               </label>
               <label>
                 Email
                 <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
               </label>
-              <button type="button" onClick={() => setStep(3)}>
-                Quay lại
-              </button>
-              <button
-                className="primary"
-                type="button"
-                disabled={name.trim() === '' || phone.trim() === ''}
-                onClick={() => setStep(5)}
-              >
-                Tiếp
-              </button>
+              <div className="sheet-actions">
+                <button type="button" onClick={() => goTo(3)}>
+                  Quay lại
+                </button>
+                <button
+                  className="primary"
+                  type="button"
+                  disabled={name.trim() === '' || phone.trim() === ''}
+                  onClick={() => goTo(5)}
+                >
+                  Tiếp
+                </button>
+              </div>
             </section>
           ) : null}
 
           {step === 5 ? (
-            <section className="sheet">
+            <section className={sheetClass} key="confirm">
               <h2>Xác nhận</h2>
-              <p>{branch?.name}</p>
-              <p>{chosenServices.map((item) => item.name).join(', ')}</p>
-              <p>{chosenStaff?.name}</p>
-              <p>
-                <time dateTime={startsAt}>{formatWhen(startsAt)}</time>
-              </p>
-              <p>
-                {name} · {phone}
-              </p>
-              <button type="button" onClick={() => setStep(4)}>
-                Quay lại
-              </button>
-              <button className="primary" type="button" disabled={pending} onClick={() => void confirm()}>
-                {pending ? 'Đang đặt...' : 'Đặt lịch'}
-              </button>
+              <dl className="summary">
+                <div style={{ '--i': 0 } as CSSProperties}>
+                  <dt>Chi nhánh</dt>
+                  <dd>{branch?.name}</dd>
+                </div>
+                <div style={{ '--i': 1 } as CSSProperties}>
+                  <dt>Dịch vụ</dt>
+                  <dd>{chosenServices.map((item) => item.name).join(', ')}</dd>
+                </div>
+                <div style={{ '--i': 2 } as CSSProperties}>
+                  <dt>Nhân viên</dt>
+                  <dd>{chosenStaff?.name}</dd>
+                </div>
+                <div style={{ '--i': 3 } as CSSProperties}>
+                  <dt>Giờ</dt>
+                  <dd>
+                    <time dateTime={startsAt}>{formatWhen(startsAt)}</time>
+                  </dd>
+                </div>
+                <div style={{ '--i': 4 } as CSSProperties}>
+                  <dt>Khách</dt>
+                  <dd>
+                    {name} · {phone}
+                  </dd>
+                </div>
+              </dl>
+              <div className="sheet-actions">
+                <button type="button" onClick={() => goTo(4)}>
+                  Quay lại
+                </button>
+                <button className="primary" type="button" disabled={pending} onClick={() => void confirm()}>
+                  {pending ? 'Đang đặt...' : 'Đặt lịch'}
+                </button>
+              </div>
             </section>
           ) : null}
         </>

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
 import { useToast } from '../app/toast'
 import { listFrom } from './listFrom'
@@ -160,25 +160,50 @@ export function ServicesPage() {
     }
   }
 
+  const money = new Intl.NumberFormat('vi-VN')
+
   return (
     <section>
-      <h1>Dịch vụ</h1>
+      <div className="page-head">
+        <div>
+          <h1>Dịch vụ</h1>
+          <p className="mute">Danh mục, giá niêm yết và thời lượng tại cơ sở</p>
+        </div>
+      </div>
       {error ? <p role="alert">{error}</p> : null}
-      {loading ? <p>Đang tải</p> : null}
-      {!loading && services.length === 0 ? <p>Chưa có dịch vụ</p> : null}
+      {loading ? (
+        <div className="skeleton" aria-busy="true">
+          <span className="sr-only">Đang tải</span>
+          <span />
+          <span />
+        </div>
+      ) : null}
+      {!loading && services.length === 0 ? <p className="empty">Chưa có dịch vụ</p> : null}
       {services.length > 0 ? (
-        <ul>
-          {services.map((service) => (
-            <li key={service.id}>
-              {service.name} · {service.duration_minutes} phút · {service.price_amount} VND
-              {service.is_active ? '' : ' · ngừng nhận'}
-              <button type="button" disabled={pending} onClick={() => void removeService(service)}>
-                Xóa
-              </button>
+        <ul className="rows">
+          {services.map((service, index) => (
+            <li key={service.id} style={{ '--i': index } as CSSProperties}>
+              <div>
+                <p className="row-title">{service.name}</p>
+                <p className="row-meta">
+                  <span>{service.duration_minutes} phút</span>
+                  <span>· {money.format(service.price_amount)} VND</span>
+                </p>
+              </div>
+              <div className="row-actions">
+                <span className={service.is_active ? 'pill pill-on' : 'pill'}>
+                  {service.is_active ? 'Đang nhận' : 'Ngừng nhận'}
+                </span>
+                <button className="danger" type="button" disabled={pending} onClick={() => void removeService(service)}>
+                  Xóa
+                </button>
+              </div>
             </li>
           ))}
         </ul>
       ) : null}
+
+      <div className="forms">
 
       <form onSubmit={(event) => void createCategory(event)}>
         <h2>Nhóm dịch vụ</h2>
@@ -270,6 +295,7 @@ export function ServicesPage() {
           </button>
         </form>
       ) : null}
+      </div>
     </section>
   )
 }

@@ -51,8 +51,8 @@ export function ResetPasswordPage() {
         <button type="submit" disabled={pending}>
           {pending ? 'Đang lưu...' : 'Đặt lại mật khẩu'}
         </button>
-        <p>
-          <Link to="/login">Đăng nhập</Link>
+        <p className="form-links">
+          <Link to="/login">Quay lại đăng nhập</Link>
         </p>
       </form>
     </main>

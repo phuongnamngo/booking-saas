@@ -68,7 +68,8 @@ export function RegisterPage() {
         <button type="submit" disabled={pending}>
           {pending ? 'Đang tạo...' : 'Tạo tài khoản'}
         </button>
-        <p>
+        <p className="form-links">
+          <span className="mute">Đã có tài khoản?</span>
           <Link to="/login">Đăng nhập</Link>
         </p>
       </form>

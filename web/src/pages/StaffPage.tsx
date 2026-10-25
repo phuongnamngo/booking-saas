@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
 import { useToast } from '../app/toast'
 import { listFrom } from './listFrom'
@@ -160,19 +160,32 @@ export function StaffPage() {
 
   return (
     <section>
-      <h1>Nhân viên</h1>
+      <div className="page-head">
+        <div>
+          <h1>Nhân viên</h1>
+          <p className="mute">Hồ sơ, giờ làm và ngày nghỉ của từng người</p>
+        </div>
+      </div>
       {error ? <p role="alert">{error}</p> : null}
-      {loading ? <p>Đang tải</p> : null}
-      {!loading && staff.length === 0 ? <p>Chưa có nhân viên</p> : null}
+      {loading ? (
+        <div className="skeleton" aria-busy="true">
+          <span className="sr-only">Đang tải</span>
+          <span />
+          <span />
+        </div>
+      ) : null}
+      {!loading && staff.length === 0 ? <p className="empty">Chưa có nhân viên</p> : null}
       {staff.length > 0 ? (
-        <ul>
-          {staff.map((profile) => (
-            <li key={profile.id}>
-              {profile.name}
+        <ul className="rows">
+          {staff.map((profile, index) => (
+            <li key={profile.id} style={{ '--i': index } as CSSProperties}>
+              <p className="row-title">{profile.name}</p>
             </li>
           ))}
         </ul>
       ) : null}
+
+      <div className="forms">
 
       <form onSubmit={(event) => void saveProfile(event)}>
         <h2>Gán nhân viên</h2>
@@ -273,6 +286,7 @@ export function StaffPage() {
           </form>
         </>
       ) : null}
+      </div>
     </section>
   )
 }

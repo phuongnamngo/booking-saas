@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
 import { getSession } from '../auth/session'
@@ -29,6 +29,7 @@ type NotificationItem = {
 
 function NotificationBell() {
   const [items, setItems] = useState<NotificationItem[]>([])
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -61,14 +62,28 @@ function NotificationBell() {
     )
   }
 
+  const visible = items.filter((item) => item.data?.message)
+  const unread = visible.some((item) => item.read_at === null)
+
   return (
     <div className="bell">
-      <button type="button">Thông báo</button>
-      <ul>
-        {items
-          .filter((item) => item.data?.message)
-          .map((item) => (
-          <li key={item.id}>
+      <button
+        type="button"
+        className="bell-toggle"
+        aria-label="Thông báo"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9Z" strokeLinejoin="round" />
+          <path d="M10 19a2 2 0 0 0 4 0" strokeLinecap="round" />
+        </svg>
+        {unread ? <span className="bell-dot" /> : null}
+      </button>
+      <ul hidden={!open}>
+        {visible.length === 0 ? <li className="bell-empty">Chưa có thông báo</li> : null}
+        {visible.map((item) => (
+          <li key={item.id} className={item.read_at === null ? 'is-unread' : undefined}>
             <button type="button" onClick={() => void markRead(item.id)}>
               {item.data?.message}
             </button>
@@ -98,12 +113,15 @@ function VerificationWall() {
 
   return (
     <main className="stage">
-      <h1>Xác thực email</h1>
-      <p>Mở liên kết trong email trước khi dùng quầy.</p>
-      {message ? <p>{message}</p> : null}
-      <button type="button" onClick={() => void resend()} disabled={pending}>
-        Gửi lại email xác thực
-      </button>
+      <p className="mark">Sổ lịch</p>
+      <section className="stage-card">
+        <h1>Xác thực email</h1>
+        <p className="mute">Mở liên kết trong email trước khi dùng quầy.</p>
+        {message ? <p>{message}</p> : null}
+        <button className="primary" type="button" onClick={() => void resend()} disabled={pending}>
+          Gửi lại email xác thực
+        </button>
+      </section>
     </main>
   )
 }
@@ -158,8 +176,15 @@ function RequirePermission({
   return children
 }
 
+function DeskHome() {
+  const appointments = allows('appointments.manage') || allows('appointments.handle')
+
+  return <Navigate to={appointments ? '/app/appointments' : '/app/profile'} replace />
+}
+
 function AppShell() {
   const appointments = allows('appointments.manage') || allows('appointments.handle')
+  const location = useLocation()
 
   return (
     <div className="desk">
@@ -180,7 +205,9 @@ function AppShell() {
           <header className="desk-bar">
             <NotificationBell />
           </header>
-          <Outlet />
+          <div className="page" key={location.pathname}>
+            <Outlet />
+          </div>
         </div>
       </ToastProvider>
     </div>
@@ -201,7 +228,7 @@ export function AppRouter() {
       <Route path="/t/:slug/appointments/:id" element={<ManageAppointmentPage />} />
       <Route path="/admin" element={<RequireAdmin />} />
       <Route path="/app" element={<RequireSession />}>
-        <Route index element={<h1>Lịch hẹn</h1>} />
+        <Route index element={<DeskHome />} />
         <Route path="branches" element={<RequirePermission permission="branches.manage"><BranchesPage /></RequirePermission>} />
         <Route path="services" element={<RequirePermission permission="services.manage"><ServicesPage /></RequirePermission>} />
         <Route path="staff" element={<RequirePermission permission="staff.manage"><StaffPage /></RequirePermission>} />

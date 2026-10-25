@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { api, ensureCsrfCookie } from '../api/client'
 import { useToast } from '../app/toast'
 import { listFrom } from './listFrom'
@@ -154,22 +154,40 @@ export function BranchesPage() {
 
   return (
     <section>
-      <h1>Chi nhánh</h1>
+      <div className="page-head">
+        <div>
+          <h1>Chi nhánh</h1>
+          <p className="mute">Cơ sở, giờ mở cửa và ngày nghỉ</p>
+        </div>
+      </div>
       {error ? <p role="alert">{error}</p> : null}
-      {loading ? <p>Đang tải</p> : null}
-      {!loading && branches.length === 0 ? <p>Chưa có chi nhánh</p> : null}
+      {loading ? (
+        <div className="skeleton" aria-busy="true">
+          <span className="sr-only">Đang tải</span>
+          <span />
+          <span />
+        </div>
+      ) : null}
+      {!loading && branches.length === 0 ? <p className="empty">Chưa có chi nhánh</p> : null}
       {branches.length > 0 ? (
-        <ul>
-          {branches.map((branch) => (
-            <li key={branch.id}>
-              {branch.name} · {branch.timezone}
-              <button type="button" disabled={pending} onClick={() => void removeBranch(branch)}>
-                Xóa
-              </button>
+        <ul className="rows">
+          {branches.map((branch, index) => (
+            <li key={branch.id} style={{ '--i': index } as CSSProperties}>
+              <div>
+                <p className="row-title">{branch.name}</p>
+                <p className="row-meta">{branch.timezone}</p>
+              </div>
+              <div className="row-actions">
+                <button className="danger" type="button" disabled={pending} onClick={() => void removeBranch(branch)}>
+                  Xóa
+                </button>
+              </div>
             </li>
           ))}
         </ul>
       ) : null}
+
+      <div className="forms">
 
       <form onSubmit={(event) => void createBranch(event)}>
         <h2>Thêm chi nhánh</h2>
@@ -257,6 +275,7 @@ export function BranchesPage() {
           </form>
         </>
       ) : null}
+      </div>
     </section>
   )
 }

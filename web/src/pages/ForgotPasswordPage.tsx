@@ -43,8 +43,8 @@ export function ForgotPasswordPage() {
         <button type="submit" disabled={pending}>
           {pending ? 'Đang gửi...' : 'Gửi hướng dẫn'}
         </button>
-        <p>
-          <Link to="/login">Đăng nhập</Link>
+        <p className="form-links">
+          <Link to="/login">Quay lại đăng nhập</Link>
         </p>
       </form>
     </main>

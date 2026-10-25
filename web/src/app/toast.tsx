@@ -34,7 +34,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={(kind, message) => setToast({ kind, message })}>
       {children}
-      {toast ? <p role="status">{toast.message}</p> : null}
+      {toast ? (
+        <p role="status" className={toast.kind === 'error' ? 'toast is-error' : 'toast'}>
+          {toast.message}
+        </p>
+      ) : null}
     </ToastContext.Provider>
   )
 }
